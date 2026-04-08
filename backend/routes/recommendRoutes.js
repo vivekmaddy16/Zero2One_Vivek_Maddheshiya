@@ -4,6 +4,7 @@ const Service = require('../models/Service');
 const Booking = require('../models/Booking');
 const { protect } = require('../middleware/auth');
 const { analyzeServiceNeed } = require('../utils/serviceAssistant');
+const { buildLocationRecommendations } = require('../utils/locationRecommendations');
 
 // @desc    Suggest a service category from a free-text need
 // @route   POST /api/recommend/assistant
@@ -26,54 +27,37 @@ router.post('/assistant', async (req, res) => {
   }
 });
 
-// @desc    Get recommended services based on user's booking history
+// @desc    Get recommended services based on user's location and activity
 // @route   GET /api/recommend
 router.get('/', protect, async (req, res) => {
   try {
-    // Get user's past bookings to find preferred categories
     const pastBookings = await Booking.find({ userId: req.user._id })
       .populate('serviceId', 'category');
 
-    const bookedCategories = [...new Set(
-      pastBookings
-        .filter(b => b.serviceId)
-        .map(b => b.serviceId.category)
-    )];
+    const bookedCategories = [
+      ...new Set(
+        pastBookings
+          .filter((booking) => booking.serviceId)
+          .map((booking) => booking.serviceId.category)
+      ),
+    ];
 
     const bookedServiceIds = pastBookings
-      .filter(b => b.serviceId)
-      .map(b => b.serviceId._id);
+      .filter((booking) => booking.serviceId)
+      .map((booking) => booking.serviceId._id);
 
-    let recommended;
+    const services = await Service.find({ isActive: true })
+      .populate('providerId', 'name avatar location lat lng')
+      .lean();
 
-    if (bookedCategories.length > 0) {
-      // Recommend services from same categories the user has booked before
-      // but exclude already booked services
-      recommended = await Service.find({
-        category: { $in: bookedCategories },
-        _id: { $nin: bookedServiceIds },
-        isActive: true
-      })
-        .populate('providerId', 'name avatar location lat lng')
-        .sort({ avgRating: -1 })
-        .limit(6);
-    }
+    const recommendations = buildLocationRecommendations({
+      services,
+      user: req.user,
+      bookedCategories,
+      excludeServiceIds: bookedServiceIds,
+    });
 
-    // If not enough recommendations, fill with top-rated services
-    if (!recommended || recommended.length < 6) {
-      const existing = recommended ? recommended.map(r => r._id) : [];
-      const topRated = await Service.find({
-        _id: { $nin: [...bookedServiceIds, ...existing] },
-        isActive: true
-      })
-        .populate('providerId', 'name avatar location lat lng')
-        .sort({ avgRating: -1, totalRatings: -1 })
-        .limit(6 - (recommended ? recommended.length : 0));
-
-      recommended = recommended ? [...recommended, ...topRated] : topRated;
-    }
-
-    res.json(recommended);
+    res.json(recommendations);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

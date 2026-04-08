@@ -7,6 +7,7 @@ import {
   CreditCard,
   IndianRupee,
   Loader,
+  MapPin,
   MessageSquare,
   ShieldCheck,
   Star,
@@ -34,12 +35,40 @@ const statusConfig = {
   cancelled: { color: 'status-cancelled', icon: XCircle, label: 'Cancelled' },
 };
 
+const emptyRecommendations = {
+  items: [],
+  basis: 'popular',
+  basisLabel: 'Popular on Fixify',
+  basisDescription: '',
+  userLocation: '',
+  matchedCount: 0,
+  bookedCategories: [],
+};
+
+function normalizeRecommendationPayload(payload) {
+  if (Array.isArray(payload)) {
+    return {
+      ...emptyRecommendations,
+      items: payload,
+      basis: 'activity',
+      basisLabel: 'Based on your activity',
+      basisDescription: 'These suggestions are using the older recommendation response format.',
+    };
+  }
+
+  return {
+    ...emptyRecommendations,
+    ...(payload || {}),
+    items: payload?.items || [],
+  };
+}
+
 export default function CustomerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [stats, setStats] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
+  const [recommendations, setRecommendations] = useState(emptyRecommendations);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [ratingBooking, setRatingBooking] = useState(null);
@@ -57,7 +86,7 @@ export default function CustomerDashboard() {
 
         setBookings(bookingResponse.data);
         setStats(statsResponse.data);
-        setRecommendations(recommendationsResponse.data);
+        setRecommendations(normalizeRecommendationPayload(recommendationsResponse.data));
       } catch (error) {
         console.error(error);
       } finally {
@@ -78,7 +107,7 @@ export default function CustomerDashboard() {
 
       setBookings(bookingResponse.data);
       setStats(statsResponse.data);
-      setRecommendations(recommendationsResponse.data);
+      setRecommendations(normalizeRecommendationPayload(recommendationsResponse.data));
     } catch (error) {
       console.error(error);
     }
@@ -272,20 +301,33 @@ export default function CustomerDashboard() {
           )}
         </div>
 
-        {recommendations.length > 0 ? (
+        {recommendations.items.length > 0 ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-16">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <span className="eyebrow">Recommended next</span>
-                <h2 className="mt-5 font-display text-4xl font-semibold text-ink-900">Services aligned with your activity</h2>
+                <span className="eyebrow">Recommended for you</span>
+                <h2 className="mt-5 font-display text-4xl font-semibold text-ink-900">Services matched to where you are</h2>
                 <p className="mt-3 max-w-2xl text-slate-600">
-                  Suggestions stay in the same card system so the experience feels consistent across discovery and post-booking.
+                  {recommendations.basisDescription ||
+                    'Suggestions stay in the same card system so the experience feels consistent across discovery and post-booking.'}
                 </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <div className="rounded-full border border-[#eadfc8] bg-white/95 px-4 py-2 text-sm font-medium text-slate-600">
+                  {recommendations.basisLabel}
+                </div>
+                {recommendations.userLocation ? (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700">
+                    <MapPin className="h-4 w-4" />
+                    {recommendations.userLocation}
+                  </div>
+                ) : null}
               </div>
             </div>
 
             <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {recommendations.slice(0, 3).map((service, index) => (
+              {recommendations.items.slice(0, 3).map((service, index) => (
                 <ServiceCard key={service._id} service={service} index={index} />
               ))}
             </div>

@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createBooking, getService } from '../api';
+import MapView from '../components/MapView';
+import { useAuth } from '../context/AuthContext';
 import { formatPriceUnit, getServiceMeta } from '../utils/serviceMeta';
 
 const timeSlots = [
@@ -50,6 +52,14 @@ export default function Booking() {
     address: '',
     notes: '',
   });
+  const providerHasCoords =
+    Number.isFinite(service?.providerId?.lat) && Number.isFinite(service?.providerId?.lng);
+  const customerCoords = {
+    lat: Number.isFinite(user?.lat) && user?.lat !== 0 ? user.lat : null,
+    lng: Number.isFinite(user?.lng) && user?.lng !== 0 ? user.lng : null,
+  };
+  const customerHasCoords =
+    Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng);
 
   useEffect(() => {
     const loadService = async () => {
@@ -82,6 +92,8 @@ export default function Booking() {
         serviceId,
         ...formData,
         address: formData.address.trim(),
+        customerLat: customerHasCoords ? customerCoords.lat : null,
+        customerLng: customerHasCoords ? customerCoords.lng : null,
       });
       toast.success('Booking created successfully');
       navigate('/dashboard');
@@ -159,19 +171,19 @@ export default function Booking() {
                   <p className="mt-2 text-sm text-slate-500">by {service?.providerId?.name}</p>
                 </div>
               </div>
-              {(typeof service?.providerId?.lat === 'number' && typeof service?.providerId?.lng === 'number') || (customerCoords.lat && customerCoords.lng) ? (
-                <div className="card p-6">
+              {providerHasCoords || customerHasCoords ? (
+                <div className="mt-6 card p-6">
                   <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Booking map</h3>
                   <MapView
                     markers={[
-                      service?.providerId?.lat && service?.providerId?.lng && {
+                      providerHasCoords && {
                         id: 'provider',
                         label: 'Provider',
                         lat: service.providerId.lat,
                         lng: service.providerId.lng,
                         color: '#2563eb'
                       },
-                      customerCoords.lat && customerCoords.lng && {
+                      customerHasCoords && {
                         id: 'customer',
                         label: 'You',
                         lat: customerCoords.lat,
@@ -179,7 +191,7 @@ export default function Booking() {
                         color: '#059669'
                       }
                     ].filter(Boolean)}
-                    center={typeof service?.providerId?.lat === 'number' && typeof service?.providerId?.lng === 'number' ? { lat: service.providerId.lat, lng: service.providerId.lng } : { lat: customerCoords.lat, lng: customerCoords.lng }}
+                    center={providerHasCoords ? { lat: service.providerId.lat, lng: service.providerId.lng } : { lat: customerCoords.lat, lng: customerCoords.lng }}
                     zoom={10}
                   />
                 </div>
