@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Zap, BookOpen, Truck, ArrowRight, Star,
-  Shield, Clock, CheckCircle, Users, Sparkles, ChevronRight
+  Shield, Clock, CheckCircle, Users, Sparkles, ChevronRight, Wrench
 } from 'lucide-react';
 import { getServices } from '../api';
 import ServiceCard from '../components/ServiceCard';
