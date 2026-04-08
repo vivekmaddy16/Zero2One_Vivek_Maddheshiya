@@ -182,9 +182,18 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {SERVICE_CATEGORIES.map((category, index) => {
             const Icon = category.icon;
+            const descriptions = {
+              electrician: 'Wiring, appliance repair, and electrical installations by certified pros.',
+              plumber: 'Leak fixes, pipe work, and bathroom fittings — fast and reliable.',
+              tutor: 'Academic coaching, test prep, and skill-building with verified tutors.',
+              delivery: 'Parcel pickup, furniture moves, and same-day local deliveries.',
+              cleaning: 'Deep cleaning, sanitization, and routine maintenance for your space.',
+              painting: 'Interior, exterior, and decorative finishes by skilled painters.',
+              carpentry: 'Custom furniture, repairs, and woodwork by experienced craftsmen.',
+            };
             return (
               <motion.div
                 key={category.id}
@@ -193,18 +202,44 @@ export default function Home() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Link to={`/services?category=${category.id}`} className="card card-hover flex h-full flex-col p-6">
-                  <div className={`inline-flex rounded-2xl bg-gradient-to-br ${category.gradient} p-4 text-white shadow-soft`}>
-                    <Icon className="h-6 w-6" />
+                <Link
+                  to={`/services?category=${category.id}`}
+                  className="group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-[#efe6d5] bg-white/90 shadow-soft backdrop-blur transition-all duration-500 hover:-translate-y-2 hover:border-primary-200 hover:shadow-soft-lg"
+                >
+                  {/* Gradient header strip */}
+                  <div className={`relative h-24 bg-gradient-to-br ${category.gradient} transition-all duration-500 group-hover:h-28`}>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.25),transparent_60%)]" />
+                    {/* Pattern overlay */}
+                    <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
                   </div>
-                  <h3 className="mt-5 font-display text-2xl font-semibold text-ink-900">{category.label}</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">
-                    Compare providers, pricing, and availability without leaving the flow.
-                  </p>
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary-700">
-                    View providers
-                    <ArrowRight className="h-4 w-4" />
-                  </span>
+
+                  {/* Floating icon */}
+                  <div className="relative z-10 -mt-8 ml-6">
+                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-white bg-white shadow-soft-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
+                      <div className={`flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br ${category.gradient}`}>
+                        <Icon className="h-7 w-7 text-white" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex flex-1 flex-col px-6 pb-6 pt-4">
+                    <h3 className="font-display text-xl font-semibold text-ink-900 transition-colors group-hover:text-primary-700">
+                      {category.label}
+                    </h3>
+                    <p className="mt-2 flex-1 text-sm leading-6 text-slate-500">
+                      {descriptions[category.id] || 'Compare providers, pricing, and availability without leaving the flow.'}
+                    </p>
+                    <div className="mt-4 flex items-center justify-between">
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 transition-all group-hover:gap-3">
+                        Explore
+                        <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                      </span>
+                      <span className={`rounded-full border ${category.badge} px-3 py-1 text-[11px] font-semibold`}>
+                        Popular
+                      </span>
+                    </div>
+                  </div>
                 </Link>
               </motion.div>
             );
