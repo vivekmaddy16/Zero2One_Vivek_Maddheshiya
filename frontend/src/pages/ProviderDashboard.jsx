@@ -5,6 +5,7 @@ import {
   Plus, Edit3, Trash2, Package, TrendingUp, Users,
   Loader, MessageSquare, X
 } from 'lucide-react';
+import MapView from '../components/MapView';
 import { getProviderRequests, getMyServices, getBookingStats, updateBookingStatus,
   createService, updateService, deleteService } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -161,6 +162,27 @@ export default function ProviderDashboard() {
                             <span className="flex items-center gap-1 text-primary-600 font-semibold"><IndianRupee className="w-4 h-4" />{b.totalAmount?.toLocaleString()}</span>
                           </div>
                           {b.address && <p className="mt-2 text-sm text-slate-400">📍 {b.address}</p>}
+                          {(typeof b.customerLat === 'number' && typeof b.customerLng === 'number') ? (
+                            <>
+                              <p className="mt-2 text-sm text-slate-400">📌 Customer coords: {b.customerLat.toFixed(5)}, {b.customerLng.toFixed(5)}</p>
+                              <div className="mt-4 rounded-3xl overflow-hidden border border-slate-200">
+                                <MapView
+                                  markers={[{
+                                    id: 'customer',
+                                    label: 'Customer',
+                                    lat: b.customerLat,
+                                    lng: b.customerLng,
+                                    color: '#059669'
+                                  }]}
+                                  center={{ lat: b.customerLat, lng: b.customerLng }}
+                                  zoom={12}
+                                  className="min-h-[240px]"
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <p className="mt-2 text-sm text-slate-400">📌 Customer coordinates not provided</p>
+                          )}
                           <div className="mt-4 flex flex-wrap gap-2">
                             {b.status === 'pending' && (<>
                               <button onClick={() => handleStatusUpdate(b._id, 'confirmed')} className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100">✓ Accept</button>

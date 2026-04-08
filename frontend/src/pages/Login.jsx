@@ -80,6 +80,10 @@ export default function Login() {
             </div>
           </div>
 
+          <div className="mt-4 text-right">
+            <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 font-medium">Forgot Password?</Link>
+          </div>
+
           <p className="text-center text-sm text-slate-500 mt-6">
             Don't have an account?{' '}
             <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">Create Account</Link>

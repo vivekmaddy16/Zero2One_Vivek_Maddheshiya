@@ -32,7 +32,7 @@ router.get('/', protect, async (req, res) => {
         _id: { $nin: bookedServiceIds },
         isActive: true
       })
-        .populate('providerId', 'name avatar location')
+        .populate('providerId', 'name avatar location lat lng')
         .sort({ avgRating: -1 })
         .limit(6);
     }
@@ -44,7 +44,7 @@ router.get('/', protect, async (req, res) => {
         _id: { $nin: [...bookedServiceIds, ...existing] },
         isActive: true
       })
-        .populate('providerId', 'name avatar location')
+        .populate('providerId', 'name avatar location lat lng')
         .sort({ avgRating: -1, totalRatings: -1 })
         .limit(6 - (recommended ? recommended.length : 0));
 

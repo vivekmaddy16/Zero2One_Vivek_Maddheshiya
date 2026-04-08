@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Star, MapPin, IndianRupee, Calendar, Phone, MessageSquare, Shield, CheckCircle } from 'lucide-react';
 import { getService, getServiceRatings } from '../api';
 import { useAuth } from '../context/AuthContext';
+import MapView from '../components/MapView';
 import StarRating from '../components/StarRating';
 import toast from 'react-hot-toast';
 
@@ -142,6 +143,33 @@ export default function ServiceDetail() {
                 {service.providerId?.location && <div className="flex items-center gap-2 text-sm text-slate-500"><MapPin className="w-4 h-4" />{service.providerId.location}</div>}
                 {service.providerId?.phone && <div className="flex items-center gap-2 text-sm text-slate-500"><Phone className="w-4 h-4" />{service.providerId.phone}</div>}
               </div>
+              {typeof service.providerId?.lat === 'number' && typeof service.providerId?.lng === 'number' ? (
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Provider location</h3>
+                  <MapView
+                    markers={[
+                      {
+                        id: 'provider',
+                        label: 'Provider',
+                        lat: service.providerId.lat,
+                        lng: service.providerId.lng,
+                        color: '#2563eb'
+                      },
+                      user?.lat && user?.lng && {
+                        id: 'customer',
+                        label: 'You',
+                        lat: user.lat,
+                        lng: user.lng,
+                        color: '#059669'
+                      }
+                    ].filter(Boolean)}
+                    center={{ lat: service.providerId.lat, lng: service.providerId.lng }}
+                    zoom={11}
+                  />
+                </div>
+              ) : (
+                <p className="mt-6 text-sm text-slate-500">Provider location coordinates are not available.</p>
+              )}
               {user && user.role === 'customer' && (
                 <button onClick={() => navigate(`/chat?to=${service.providerId._id}`)}
                   className="btn-secondary w-full mt-4 flex items-center justify-center gap-2">

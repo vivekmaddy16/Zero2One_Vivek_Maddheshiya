@@ -30,7 +30,9 @@ const seedData = async () => {
         password: 'password123',
         role: 'customer',
         phone: '9876543210',
-        location: 'Mumbai, Maharashtra'
+        location: 'Mumbai, Maharashtra',
+        lat: 19.0760,
+        lng: 72.8777
       },
       {
         name: 'Priya Patel',
@@ -38,7 +40,9 @@ const seedData = async () => {
         password: 'password123',
         role: 'customer',
         phone: '9876543211',
-        location: 'Delhi, NCR'
+        location: 'Delhi, NCR',
+        lat: 28.7041,
+        lng: 77.1025
       },
       {
         name: 'Amit Kumar',
@@ -47,6 +51,8 @@ const seedData = async () => {
         role: 'provider',
         phone: '9876543212',
         location: 'Mumbai, Maharashtra',
+        lat: 19.0760,
+        lng: 72.8777,
         bio: 'Expert electrician with 10+ years experience. Specializing in home wiring, appliance repair, and smart home installations.'
       },
       {
@@ -56,6 +62,8 @@ const seedData = async () => {
         role: 'provider',
         phone: '9876543213',
         location: 'Delhi, NCR',
+        lat: 28.7041,
+        lng: 77.1025,
         bio: 'Professional plumber handling all types of plumbing work including pipe fitting, leak repair, and bathroom renovation.'
       },
       {
@@ -65,6 +73,8 @@ const seedData = async () => {
         role: 'provider',
         phone: '9876543214',
         location: 'Bangalore, Karnataka',
+        lat: 12.9716,
+        lng: 77.5946,
         bio: 'Passionate tutor specializing in Mathematics and Science for grades 8-12. IIT graduate with proven track record.'
       },
       {
@@ -74,6 +84,8 @@ const seedData = async () => {
         role: 'provider',
         phone: '9876543215',
         location: 'Mumbai, Maharashtra',
+        lat: 19.0760,
+        lng: 72.8777,
         bio: 'Reliable same-day delivery service. Package delivery, grocery runs, and document courier across the city.'
       }
     ]);

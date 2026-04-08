@@ -7,9 +7,32 @@ import { registerUser } from '../api';
 import toast from 'react-hot-toast';
 
 export default function Register() {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'customer', phone: '', location: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'customer', phone: '', location: '', lat: 0, lng: 0 });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const { latitude, longitude } = coords;
+        setFormData((prev) => ({
+          ...prev,
+          lat: latitude,
+          lng: longitude,
+          location: prev.location || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+        }));
+        toast.success('Exact location captured from your device');
+      },
+      () => {
+        toast.error('Unable to access location. Please allow location access and try again.');
+      }
+    );
+  };
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -95,6 +118,16 @@ export default function Register() {
               <input type="text" value={formData.location} onChange={(e) => update('location', e.target.value)}
                 placeholder="City, State" className="input-field !pl-12" />
             </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-slate-500">Capture exact coordinates for better matches.</p>
+              <button type="button" onClick={getCurrentLocation}
+                className="text-sm font-medium text-primary-600 hover:text-primary-800">
+                Use current location
+              </button>
+            </div>
+            {formData.lat && formData.lng ? (
+              <p className="text-xs text-slate-500">Coordinates captured: {formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}</p>
+            ) : null}
             <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 !py-3.5">
               {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <><UserPlus className="w-5 h-5" /> Create Account</>}
