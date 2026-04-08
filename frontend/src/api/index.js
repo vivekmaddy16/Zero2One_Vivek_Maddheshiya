@@ -62,6 +62,7 @@ export const sendMessage = (data) => API.post('/messages', data);
 
 // Recommendations
 export const getRecommendations = () => API.get('/recommend');
+export const askServiceAssistant = (message) => API.post('/recommend/assistant', { message });
 
 // Users (for chat)
 export const getUserById = (id) => API.get(`/auth/user/${id}`);

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { getServices } from '../api';
 import ServiceCard from '../components/ServiceCard';
+import ServiceAssistant from '../components/ServiceAssistant';
 import { SERVICE_CATEGORIES } from '../utils/serviceMeta';
 
 const trustStats = [
@@ -140,6 +141,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <ServiceAssistant />
 
       <section className="section-shell mt-16">
         <div className="card-elevated overflow-hidden p-8 sm:p-10">

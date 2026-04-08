@@ -13,23 +13,13 @@
       <stop stop-color="#9FE7FF" stop-opacity="0.45" />
       <stop offset="1" stop-color="#9FE7FF" stop-opacity="0" />
     </radialGradient>
-    <filter id="shadow" x="105" y="115" width="983" height="703" color-interpolation-filters="sRGB">
-      <feFlood flood-opacity="0" result="BackgroundImageFix" />
-      <feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" />
-      <feOffset dy="24" />
-      <feGaussianBlur stdDeviation="28" />
-      <feComposite in2="hardAlpha" operator="out" />
-      <feColorMatrix values="0 0 0 0 0.042 0 0 0 0 0.094 0 0 0 0 0.173 0 0 0 0.18 0" />
-      <feBlend in2="BackgroundImageFix" result="effect1_dropShadow_0_1" />
-      <feBlend in="SourceGraphic" in2="effect1_dropShadow_0_1" result="shape" />
-    </filter>
   </defs>
   <rect width="1200" height="900" rx="56" fill="url(#bg)" />
   <rect width="1200" height="900" rx="56" fill="url(#glowA)" />
   <rect width="1200" height="900" rx="56" fill="url(#glowB)" />
   <circle cx="165" cy="144" r="70" fill="#FFFFFF" fill-opacity="0.08" />
   <circle cx="1040" cy="696" r="94" fill="#FFFFFF" fill-opacity="0.08" />
-  <g filter="url(#shadow)">
+  <g>
     <rect x="160" y="146" width="880" height="590" rx="44" fill="#F6F7FB" />
     <rect x="160" y="146" width="880" height="590" rx="44" stroke="#DDE7F7" stroke-width="4" />
     <rect x="214" y="206" width="258" height="470" rx="32" fill="#16345D" />

@@ -32,6 +32,7 @@ export default function ServiceDetail() {
   const [service, setService] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
     const loadService = async () => {
@@ -39,6 +40,7 @@ export default function ServiceDetail() {
         const [serviceResponse, ratingsResponse] = await Promise.all([getService(id), getServiceRatings(id)]);
         setService(serviceResponse.data);
         setRatings(ratingsResponse.data);
+        setImageFailed(false);
       } catch (error) {
         toast.error('Service not found');
         navigate('/services');
@@ -87,6 +89,7 @@ export default function ServiceDetail() {
 
   const meta = getServiceMeta(service.category);
   const Icon = meta.icon;
+  const showImage = Boolean(service.image && !imageFailed);
 
   return (
     <div className="pb-16 pt-28">
@@ -103,15 +106,20 @@ export default function ServiceDetail() {
           <div className="space-y-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card-elevated overflow-hidden">
               <div className="relative h-[320px] overflow-hidden bg-slate-950">
-                {service.image ? (
-                  <img src={service.image} alt={service.title} className="h-full w-full object-cover" />
+                {showImage ? (
+                  <img
+                    src={service.image}
+                    alt={service.title}
+                    className="h-full w-full object-cover"
+                    onError={() => setImageFailed(true)}
+                  />
                 ) : null}
                 <div
                   className={`absolute inset-0 bg-gradient-to-br ${meta.gradient} ${
-                    service.image ? 'opacity-40 mix-blend-multiply' : ''
+                    showImage ? 'opacity-40 mix-blend-multiply' : ''
                   }`}
                 />
-                {!service.image && (
+                {!showImage && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="rounded-[32px] border border-white/15 bg-white/12 p-7 text-white backdrop-blur">
                       <Icon className="h-16 w-16" />

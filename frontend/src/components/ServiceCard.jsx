@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -12,6 +13,13 @@ import { formatPriceUnit, getServiceMeta } from '../utils/serviceMeta';
 export default function ServiceCard({ service, index = 0 }) {
   const meta = getServiceMeta(service.category);
   const Icon = meta.icon;
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [service._id, service.image]);
+
+  const showImage = Boolean(service.image && !imageFailed);
 
   return (
     <motion.div
@@ -23,25 +31,24 @@ export default function ServiceCard({ service, index = 0 }) {
       <Link to={`/services/${service._id}`} className="group block h-full">
         <article className="card card-hover flex h-full flex-col overflow-hidden">
           <div className="relative h-56 overflow-hidden bg-[#f7efe2]">
-            {service.image ? (
+            {showImage ? (
               <img
                 src={service.image}
                 alt={service.title}
+                loading="lazy"
                 className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                onError={(event) => {
-                  event.currentTarget.style.display = 'none';
-                }}
+                onError={() => setImageFailed(true)}
               />
             ) : null}
 
             <div
               className={`absolute inset-0 bg-gradient-to-br ${meta.gradient} ${
-                service.image ? 'opacity-20 mix-blend-multiply' : ''
+                showImage ? 'opacity-20 mix-blend-multiply' : ''
               }`}
             />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.04))]" />
 
-            {!service.image && (
+            {!showImage && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="rounded-[28px] border border-white/60 bg-white/70 p-6 text-ink-900 backdrop-blur">
                   <Icon className="h-14 w-14" />
