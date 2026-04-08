@@ -10,6 +10,10 @@ const Service = require('../models/Service');
 const Booking = require('../models/Booking');
 const Rating = require('../models/Rating');
 
+const DEMO_LOCATION = 'Lucknow, Uttar Pradesh';
+const DEMO_LAT = 26.8467;
+const DEMO_LNG = 80.9462;
+
 const seedData = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -30,9 +34,9 @@ const seedData = async () => {
         password: 'password123',
         role: 'customer',
         phone: '9876543210',
-        location: 'Mumbai, Maharashtra',
-        lat: 19.0760,
-        lng: 72.8777
+        location: DEMO_LOCATION,
+        lat: DEMO_LAT,
+        lng: DEMO_LNG
       },
       {
         name: 'Priya Patel',
@@ -40,9 +44,9 @@ const seedData = async () => {
         password: 'password123',
         role: 'customer',
         phone: '9876543211',
-        location: 'Delhi, NCR',
-        lat: 28.7041,
-        lng: 77.1025
+        location: DEMO_LOCATION,
+        lat: DEMO_LAT,
+        lng: DEMO_LNG
       },
       {
         name: 'Amit Kumar',
@@ -50,9 +54,9 @@ const seedData = async () => {
         password: 'password123',
         role: 'provider',
         phone: '9876543212',
-        location: 'Mumbai, Maharashtra',
-        lat: 19.0760,
-        lng: 72.8777,
+        location: DEMO_LOCATION,
+        lat: DEMO_LAT,
+        lng: DEMO_LNG,
         bio: 'Expert electrician with 10+ years experience. Specializing in home wiring, appliance repair, and smart home installations.'
       },
       {
@@ -61,9 +65,9 @@ const seedData = async () => {
         password: 'password123',
         role: 'provider',
         phone: '9876543213',
-        location: 'Delhi, NCR',
-        lat: 28.7041,
-        lng: 77.1025,
+        location: DEMO_LOCATION,
+        lat: DEMO_LAT,
+        lng: DEMO_LNG,
         bio: 'Professional plumber handling all types of plumbing work including pipe fitting, leak repair, and bathroom renovation.'
       },
       {
@@ -72,9 +76,9 @@ const seedData = async () => {
         password: 'password123',
         role: 'provider',
         phone: '9876543214',
-        location: 'Bangalore, Karnataka',
-        lat: 12.9716,
-        lng: 77.5946,
+        location: DEMO_LOCATION,
+        lat: DEMO_LAT,
+        lng: DEMO_LNG,
         bio: 'Passionate tutor specializing in Mathematics and Science for grades 8-12. IIT graduate with proven track record.'
       },
       {
@@ -83,10 +87,43 @@ const seedData = async () => {
         password: 'password123',
         role: 'provider',
         phone: '9876543215',
-        location: 'Mumbai, Maharashtra',
-        lat: 19.0760,
-        lng: 72.8777,
+        location: DEMO_LOCATION,
+        lat: DEMO_LAT,
+        lng: DEMO_LNG,
         bio: 'Reliable same-day delivery service. Package delivery, grocery runs, and document courier across the city.'
+      },
+      {
+        name: 'Kavita Nair',
+        email: 'kavita@test.com',
+        password: 'password123',
+        role: 'provider',
+        phone: '9876543216',
+        location: DEMO_LOCATION,
+        lat: DEMO_LAT,
+        lng: DEMO_LNG,
+        bio: 'Trusted home cleaning professional focused on deep cleaning, sanitization, and sofa care for busy households.'
+      },
+      {
+        name: 'Rohan Malhotra',
+        email: 'rohan@test.com',
+        password: 'password123',
+        role: 'provider',
+        phone: '9876543217',
+        location: DEMO_LOCATION,
+        lat: DEMO_LAT,
+        lng: DEMO_LNG,
+        bio: 'Interior and exterior painting specialist offering smooth finishes, moisture-resistant coatings, and fast room makeovers.'
+      },
+      {
+        name: 'Arjun Mehta',
+        email: 'arjun@test.com',
+        password: 'password123',
+        role: 'provider',
+        phone: '9876543218',
+        location: DEMO_LOCATION,
+        lat: DEMO_LAT,
+        lng: DEMO_LNG,
+        bio: 'Experienced carpenter for furniture repair, custom storage, and door or cabinet fixes with clean finishing work.'
       }
     ]);
 
@@ -243,6 +280,117 @@ const seedData = async () => {
         avgRating: 4.5,
         totalRatings: 9,
         tags: ['moving', 'furniture', 'heavy']
+      },
+      // Cleaning services
+      {
+        title: 'Home Deep Cleaning',
+        description: 'Complete deep cleaning for bedrooms, living rooms, kitchens, and washrooms. Includes dust removal, floor scrubbing, fan cleaning, and disinfection of high-touch surfaces.',
+        category: 'cleaning',
+        price: 2200,
+        priceUnit: 'fixed',
+        providerId: providers[4]._id,
+        image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400',
+        avgRating: 4.8,
+        totalRatings: 26,
+        tags: ['deep cleaning', 'sanitization', 'home']
+      },
+      {
+        title: 'Kitchen & Bathroom Sanitization',
+        description: 'Targeted cleaning for kitchens and bathrooms with stain removal, sink scrubbing, tile cleaning, and germ-focused sanitization for everyday hygiene.',
+        category: 'cleaning',
+        price: 900,
+        priceUnit: 'fixed',
+        providerId: providers[4]._id,
+        image: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?w=400',
+        avgRating: 4.6,
+        totalRatings: 18,
+        tags: ['kitchen', 'bathroom', 'sanitization']
+      },
+      {
+        title: 'Sofa & Carpet Cleaning',
+        description: 'Professional upholstery and carpet cleaning using fabric-safe products, odor control, and stain treatment for homes, offices, and rental properties.',
+        category: 'cleaning',
+        price: 700,
+        priceUnit: 'per_hour',
+        providerId: providers[4]._id,
+        image: 'https://images.unsplash.com/photo-1563453392212-326f5e854473?w=400',
+        avgRating: 4.7,
+        totalRatings: 14,
+        tags: ['sofa', 'carpet', 'upholstery']
+      },
+      // Painting services
+      {
+        title: 'Interior Wall Painting',
+        description: 'Room-by-room interior painting with surface preparation, crack filling, primer application, and smooth finish coats for homes and apartments.',
+        category: 'painting',
+        price: 6500,
+        priceUnit: 'fixed',
+        providerId: providers[5]._id,
+        image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=400',
+        avgRating: 4.9,
+        totalRatings: 21,
+        tags: ['interior', 'wall paint', 'primer']
+      },
+      {
+        title: 'Exterior Weatherproof Painting',
+        description: 'Protect your outside walls with durable weather-resistant paint, waterproof coatings, and clean edge finishing for gates, balconies, and house exteriors.',
+        category: 'painting',
+        price: 12000,
+        priceUnit: 'fixed',
+        providerId: providers[5]._id,
+        image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=400',
+        avgRating: 4.5,
+        totalRatings: 11,
+        tags: ['exterior', 'weatherproof', 'coating']
+      },
+      {
+        title: 'Accent Wall & Texture Finish',
+        description: 'Upgrade one room with accent wall painting, textured finishes, stencil work, and modern color combinations tailored to your interior style.',
+        category: 'painting',
+        price: 3500,
+        priceUnit: 'fixed',
+        providerId: providers[5]._id,
+        image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=400',
+        avgRating: 4.7,
+        totalRatings: 9,
+        tags: ['accent wall', 'texture', 'decor']
+      },
+      // Carpentry services
+      {
+        title: 'Furniture Repair & Assembly',
+        description: 'Repair loose joints, broken drawers, damaged tables, and wardrobes. Also includes bed, desk, and flat-pack furniture assembly at your location.',
+        category: 'carpentry',
+        price: 850,
+        priceUnit: 'per_hour',
+        providerId: providers[6]._id,
+        image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=400',
+        avgRating: 4.8,
+        totalRatings: 24,
+        tags: ['furniture', 'repair', 'assembly']
+      },
+      {
+        title: 'Custom Shelves & Storage',
+        description: 'Get custom wooden shelves, utility racks, and storage solutions designed for kitchens, bedrooms, workspaces, and compact apartments.',
+        category: 'carpentry',
+        price: 5000,
+        priceUnit: 'fixed',
+        providerId: providers[6]._id,
+        image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=400',
+        avgRating: 4.6,
+        totalRatings: 12,
+        tags: ['shelves', 'storage', 'custom woodwork']
+      },
+      {
+        title: 'Door, Window & Cabinet Fixes',
+        description: 'Fix jammed doors, cabinet hinges, window frames, handles, and alignment issues with neat on-site carpentry work and replacement fitting support.',
+        category: 'carpentry',
+        price: 950,
+        priceUnit: 'per_hour',
+        providerId: providers[6]._id,
+        image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=400',
+        avgRating: 4.5,
+        totalRatings: 16,
+        tags: ['door', 'window', 'cabinet']
       }
     ]);
 
@@ -255,6 +403,9 @@ const seedData = async () => {
     console.log('Provider: deepak@test.com / password123');
     console.log('Provider: sneha@test.com / password123');
     console.log('Provider: vikram@test.com / password123');
+    console.log('Provider: kavita@test.com / password123');
+    console.log('Provider: rohan@test.com / password123');
+    console.log('Provider: arjun@test.com / password123');
 
     process.exit(0);
   } catch (error) {
