@@ -1,11 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Menu, X, Home, Search, Calendar, LayoutDashboard,
-  MessageSquare, LogOut, ChevronDown
+  Calendar,
+  ChevronDown,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Search,
+  UserCircle2,
+  X,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -16,10 +24,16 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    const handleScroll = () => setScrolled(window.scrollY > 18);
+    handleScroll();
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    setIsOpen(false);
+    setShowProfile(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -27,166 +41,205 @@ export default function Navbar() {
     setShowProfile(false);
   };
 
+  const dashboardPath = user?.role === 'provider' ? '/provider-dashboard' : '/dashboard';
+
   const navLinks = [
     { to: '/', label: 'Home', icon: Home },
     { to: '/services', label: 'Services', icon: Search },
   ];
 
   if (user) {
-    if (user.role === 'customer') {
-      navLinks.push({ to: '/dashboard', label: 'My Bookings', icon: Calendar });
-    } else {
-      navLinks.push({ to: '/provider-dashboard', label: 'Dashboard', icon: LayoutDashboard });
-    }
+    navLinks.push({
+      to: dashboardPath,
+      label: user.role === 'provider' ? 'Dashboard' : 'Bookings',
+      icon: user.role === 'provider' ? LayoutDashboard : Calendar,
+    });
     navLinks.push({ to: '/chat', label: 'Messages', icon: MessageSquare });
   }
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-      scrolled ? 'bg-white/80 backdrop-blur-lg shadow-soft border-b border-slate-100' : 'bg-white/50 backdrop-blur-sm'
-    }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-18">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <img src="/logo.png" alt="Fixify" className="w-9 h-9 rounded-xl object-cover group-hover:shadow-primary transition-all duration-300" />
-            <span className="text-xl font-extrabold gradient-text">Fixify</span>
+    <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${scrolled ? 'py-3' : 'py-4'}`}>
+      <div className="section-shell">
+        <div
+          className={`flex items-center justify-between rounded-full border px-3 py-3 transition-all duration-500 sm:px-4 ${
+            scrolled
+              ? 'border-[#eadfc8] bg-[rgba(255,253,248,0.96)] shadow-soft-lg backdrop-blur-xl'
+              : 'border-[#efe7d6] bg-[rgba(255,253,248,0.88)] shadow-soft backdrop-blur-xl'
+          }`}
+        >
+          <Link to="/" className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#f2e4c5] bg-white shadow-soft">
+              <img src="/logo.png" alt="Fixify" className="h-9 w-9 rounded-xl object-cover" />
+            </div>
+            <div className="hidden sm:block">
+              <p className="font-display text-lg font-semibold text-ink-900">Fixify</p>
+              <p className="text-xs text-slate-500">Simple local service booking</p>
+            </div>
           </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1 rounded-full border border-[#ece3d2] bg-white/85 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300
-                  ${isActive(link.to)
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                  }`}
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition-all ${
+                  isActive(link.to)
+                    ? 'border-accent-200 bg-accent-50 text-accent-700'
+                    : 'border-transparent text-slate-600 hover:border-[#efe3cf] hover:bg-[#faf6ed] hover:text-ink-900'
+                }`}
               >
-                <link.icon className="w-4 h-4" />
+                <link.icon className="h-4 w-4" />
                 {link.label}
               </Link>
             ))}
           </div>
 
-          {/* Auth / Profile */}
           <div className="hidden lg:flex items-center gap-3">
             {user ? (
               <div className="relative">
                 <button
-                  onClick={() => setShowProfile(!showProfile)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-all duration-300"
+                  onClick={() => setShowProfile((value) => !value)}
+                  className="flex items-center gap-3 rounded-full border border-[#eadfc8] bg-white px-3 py-2 text-left shadow-soft transition-all hover:border-primary-200"
                 >
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm">
-                      {user.name?.charAt(0).toUpperCase()}
-                    </span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-accent-500 to-primary-500 text-sm font-bold text-white">
+                    {user.name?.charAt(0)?.toUpperCase() || 'F'}
                   </div>
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-slate-800">{user.name}</p>
-                    <p className="text-xs text-slate-400 capitalize">{user.role}</p>
+                  <div>
+                    <p className="text-sm font-semibold text-ink-900">{user.name}</p>
+                    <p className="text-xs capitalize text-slate-500">{user.role}</p>
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${
-                    showProfile ? 'rotate-180' : ''
-                  }`} />
+                  <ChevronDown
+                    className={`h-4 w-4 text-slate-400 transition-transform ${showProfile ? 'rotate-180' : ''}`}
+                  />
                 </button>
 
                 <AnimatePresence>
                   {showProfile && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      initial={{ opacity: 0, y: -10, scale: 0.98 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-slate-100 shadow-soft-lg p-2"
+                      exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                      className="absolute right-0 top-full mt-3 w-64 rounded-[28px] border border-[#eadfc8] bg-[rgba(255,253,248,0.98)] p-3 shadow-soft-lg"
                     >
-                      <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                        <p className="text-sm font-medium text-slate-800">{user.name}</p>
-                        <p className="text-xs text-slate-400">{user.email}</p>
+                      <div className="rounded-[24px] border border-primary-100 bg-primary-50/70 px-4 py-4">
+                        <p className="text-sm font-semibold text-ink-900">{user.name}</p>
+                        <p className="mt-1 text-xs text-slate-500">{user.email}</p>
                       </div>
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Sign Out
-                      </button>
+                      <div className="mt-3 space-y-1">
+                        <Link
+                          to={dashboardPath}
+                          className="flex items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
+                        >
+                          <LayoutDashboard className="h-4 w-4" />
+                          Open dashboard
+                        </Link>
+                        <Link
+                          to="/profile"
+                          className="flex items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
+                        >
+                          <UserCircle2 className="h-4 w-4" />
+                          My profile
+                        </Link>
+                        <button
+                          onClick={handleLogout}
+                          className="flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign out
+                        </button>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
             ) : (
-              <div className="flex items-center gap-3">
-                <Link to="/login" className="btn-secondary text-sm !py-2 !px-5">
+              <>
+                <Link to="/login" className="btn-secondary !px-5 !py-3">
                   Sign In
                 </Link>
-                <Link to="/register" className="btn-primary text-sm !py-2 !px-5">
+                <Link to="/register" className="btn-primary !px-6 !py-3">
                   Get Started
                 </Link>
-              </div>
+              </>
             )}
           </div>
 
-          {/* Mobile Menu Button */}
           <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-600"
+            onClick={() => setIsOpen((value) => !value)}
+            className="inline-flex rounded-full border border-[#eadfc8] bg-white p-3 text-slate-600 shadow-soft transition-colors hover:text-primary-700 lg:hidden"
           >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
-      </div>
 
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-white border-t border-slate-100 shadow-soft-lg"
-          >
-            <div className="px-4 py-4 space-y-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
-                    ${isActive(link.to)
-                      ? 'bg-primary-50 text-primary-700'
-                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-3 rounded-[28px] border border-[#eadfc8] bg-[rgba(255,253,248,0.98)] p-4 shadow-soft-lg lg:hidden"
+            >
+              <div className="mb-3 rounded-[22px] border border-primary-100 bg-primary-50/80 px-4 py-3 text-sm text-primary-700">
+                Find trusted providers, compare pricing clearly, and book without clutter.
+              </div>
+
+              <div className="space-y-2">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    className={`flex items-center gap-3 rounded-[22px] border px-4 py-3 text-sm font-semibold transition-all ${
+                      isActive(link.to)
+                        ? 'border-accent-200 bg-accent-50 text-accent-700'
+                        : 'border-transparent text-slate-600 hover:bg-primary-50/60 hover:text-primary-700'
                     }`}
-                >
-                  <link.icon className="w-5 h-5" />
-                  {link.label}
-                </Link>
-              ))}
+                  >
+                    <link.icon className="h-4 w-4" />
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+
               {user ? (
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 w-full"
-                >
-                  <LogOut className="w-5 h-5" />
-                  Sign Out
-                </button>
+                <div className="mt-4 border-t border-[#f0e6d5] pt-4">
+                  <div className="mb-3 flex items-center gap-3 rounded-[22px] border border-[#eee4d2] bg-white px-4 py-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-accent-500 to-primary-500 text-sm font-bold text-white">
+                      {user.name?.charAt(0)?.toUpperCase() || 'F'}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-ink-900">{user.name}</p>
+                      <p className="text-xs text-slate-500">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Link to="/profile" className="btn-secondary block text-center">
+                      View Profile
+                    </Link>
+                    <button onClick={handleLogout} className="btn-danger w-full">
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <div className="pt-3 border-t border-slate-100 space-y-2">
-                  <Link to="/login" onClick={() => setIsOpen(false)} className="block w-full btn-secondary text-center text-sm">
+                <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#f0e6d5] pt-4">
+                  <Link to="/login" className="btn-secondary text-center">
                     Sign In
                   </Link>
-                  <Link to="/register" onClick={() => setIsOpen(false)} className="block w-full btn-primary text-center text-sm">
-                    Get Started
+                  <Link to="/register" className="btn-primary text-center">
+                    Join
                   </Link>
                 </div>
               )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </nav>
   );
 }

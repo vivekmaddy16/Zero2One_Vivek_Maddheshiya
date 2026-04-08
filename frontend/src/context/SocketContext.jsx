@@ -1,34 +1,48 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+
+const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 const SocketContext = createContext();
 
 export function SocketProvider({ children }) {
   const { user } = useAuth();
-  const socketRef = useRef(null);
+  const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const socketRef = useRef(null);
 
   useEffect(() => {
     if (user) {
-      socketRef.current = io('http://localhost:5000');
+      const newSocket = io(SOCKET_URL);
+      socketRef.current = newSocket;
+      setSocket(newSocket);
 
-      socketRef.current.on('connect', () => {
-        socketRef.current.emit('register', user._id);
+      newSocket.on('connect', () => {
+        newSocket.emit('register', user._id);
       });
 
-      socketRef.current.on('onlineUsers', (users) => {
+      newSocket.on('onlineUsers', (users) => {
         setOnlineUsers(users);
       });
 
       return () => {
-        socketRef.current?.disconnect();
+        newSocket.disconnect();
+        setSocket(null);
+        socketRef.current = null;
       };
+    } else {
+      // Cleanup on logout
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        setSocket(null);
+        socketRef.current = null;
+      }
     }
   }, [user]);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, onlineUsers }}>
+    <SocketContext.Provider value={{ socket, onlineUsers }}>
       {children}
     </SocketContext.Provider>
   );

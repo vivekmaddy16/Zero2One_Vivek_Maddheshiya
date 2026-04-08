@@ -1,22 +1,50 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Calendar, Clock, CheckCircle, XCircle, IndianRupee,
-  Plus, Edit3, Trash2, Package, TrendingUp, Users,
-  Loader, MessageSquare, X
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Edit3,
+  IndianRupee,
+  Loader,
+  MessageSquare,
+  Package,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  Users,
+  X,
+  XCircle,
 } from 'lucide-react';
-import { getProviderRequests, getMyServices, getBookingStats, updateBookingStatus,
-  createService, updateService, deleteService } from '../api';
-import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import {
+  createService,
+  deleteService,
+  getBookingStats,
+  getMyServices,
+  getProviderRequests,
+  updateBookingStatus,
+  updateService,
+} from '../api';
+import { useAuth } from '../context/AuthContext';
+import { formatPriceUnit, formatStatusLabel, getServiceMeta } from '../utils/serviceMeta';
 
 const statusConfig = {
   pending: { color: 'status-pending', icon: Clock, label: 'Pending' },
-  confirmed: { color: 'status-confirmed', icon: CheckCircle, label: 'Confirmed' },
+  confirmed: { color: 'status-confirmed', icon: CheckCircle2, label: 'Confirmed' },
   in_progress: { color: 'status-in_progress', icon: Loader, label: 'In Progress' },
-  completed: { color: 'status-completed', icon: CheckCircle, label: 'Completed' },
+  completed: { color: 'status-completed', icon: CheckCircle2, label: 'Completed' },
   cancelled: { color: 'status-cancelled', icon: XCircle, label: 'Cancelled' },
+};
+
+const initialServiceForm = {
+  title: '',
+  description: '',
+  category: 'electrician',
+  price: '',
+  priceUnit: 'fixed',
+  image: '',
 };
 
 export default function ProviderDashboard() {
@@ -30,233 +58,501 @@ export default function ProviderDashboard() {
   const [filter, setFilter] = useState('all');
   const [showServiceForm, setShowServiceForm] = useState(false);
   const [editingService, setEditingService] = useState(null);
-  const [serviceForm, setServiceForm] = useState({
-    title: '', description: '', category: 'electrician', price: '', priceUnit: 'fixed', image: ''
-  });
+  const [serviceForm, setServiceForm] = useState(initialServiceForm);
 
-  useEffect(() => { loadData(); }, [filter]);
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const [requestResponse, serviceResponse, statsResponse] = await Promise.all([
+          getProviderRequests({ status: filter }),
+          getMyServices(),
+          getBookingStats(),
+        ]);
 
-  const loadData = async () => {
-    setLoading(true);
+        setRequests(requestResponse.data);
+        setServices(serviceResponse.data);
+        setStats(statsResponse.data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [filter]);
+
+  const refreshData = async () => {
     try {
-      const [rRes, sRes, stRes] = await Promise.all([
-        getProviderRequests({ status: filter }), getMyServices(), getBookingStats()
+      const [requestResponse, serviceResponse, statsResponse] = await Promise.all([
+        getProviderRequests({ status: filter }),
+        getMyServices(),
+        getBookingStats(),
       ]);
-      setRequests(rRes.data); setServices(sRes.data); setStats(stRes.data);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+
+      setRequests(requestResponse.data);
+      setServices(serviceResponse.data);
+      setStats(statsResponse.data);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleStatusUpdate = async (id, s) => {
-    try { await updateBookingStatus(id, s); toast.success(`Booking ${s}`); loadData(); }
-    catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
-  };
-
-  const handleServiceSubmit = async (e) => {
-    e.preventDefault();
+  const handleStatusUpdate = async (id, status) => {
     try {
-      if (editingService) { await updateService(editingService._id, serviceForm); toast.success('Updated'); }
-      else { await createService(serviceForm); toast.success('Created'); }
-      resetForm(); loadData();
-    } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
+      await updateBookingStatus(id, status);
+      toast.success(`Booking marked ${formatStatusLabel(status).toLowerCase()}`);
+      refreshData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update booking');
+    }
+  };
+
+  const resetForm = () => {
+    setEditingService(null);
+    setServiceForm(initialServiceForm);
+    setShowServiceForm(false);
+  };
+
+  const handleServiceSubmit = async (event) => {
+    event.preventDefault();
+
+    try {
+      if (editingService) {
+        await updateService(editingService._id, serviceForm);
+        toast.success('Service updated');
+      } else {
+        await createService(serviceForm);
+        toast.success('Service created');
+      }
+
+      resetForm();
+      refreshData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to save service');
+    }
   };
 
   const handleDeleteService = async (id) => {
     if (!confirm('Delete this service?')) return;
-    try { await deleteService(id); toast.success('Deleted'); loadData(); }
-    catch { toast.error('Failed to delete'); }
+
+    try {
+      await deleteService(id);
+      toast.success('Service deleted');
+      refreshData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete service');
+    }
   };
 
-  const editSvc = (s) => {
-    setEditingService(s);
-    setServiceForm({ title: s.title, description: s.description, category: s.category, price: s.price, priceUnit: s.priceUnit, image: s.image || '' });
+  const editService = (service) => {
+    setEditingService(service);
+    setServiceForm({
+      title: service.title,
+      description: service.description,
+      category: service.category,
+      price: service.price,
+      priceUnit: service.priceUnit,
+      image: service.image || '',
+    });
     setShowServiceForm(true);
   };
 
-  const resetForm = () => {
-    setShowServiceForm(false); setEditingService(null);
-    setServiceForm({ title: '', description: '', category: 'electrician', price: '', priceUnit: 'fixed', image: '' });
-  };
-
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
-      <div className="max-w-7xl mx-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800">Provider <span className="gradient-text">Dashboard</span></h1>
-          <p className="text-slate-500 mt-1">Manage your services and requests</p>
+    <div className="pb-16 pt-28">
+      <div className="section-shell">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card-elevated overflow-hidden">
+          <div className="grid gap-8 bg-[radial-gradient(circle_at_top_right,rgba(52,113,245,0.18),transparent_28%)] p-8 lg:grid-cols-[1fr_360px] lg:p-10">
+            <div>
+              <span className="eyebrow">Provider workspace</span>
+              <h1 className="mt-5 font-display text-4xl font-semibold text-ink-900">
+                Run your Fixify listings with more trust and less clutter.
+              </h1>
+              <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
+                Manage service requests, update listings, and keep communication clear from one dashboard for {user?.name}.
+              </p>
+            </div>
+
+            <div className="rounded-[32px] bg-slate-950 p-6 text-white shadow-soft-lg">
+              <p className="text-sm text-slate-300">Provider goal</p>
+              <h2 className="mt-2 font-display text-3xl font-semibold">Clarity builds credibility</h2>
+              <p className="mt-4 text-sm leading-7 text-slate-300">
+                Clean request states, service cards, and quick action buttons help providers feel organized and trustworthy.
+              </p>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Stats */}
-        {stats && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        {stats ? (
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {[
-              { label: 'Total Requests', value: stats.totalBookings, icon: Package, color: 'text-primary-600', bg: 'bg-primary-50' },
-              { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-              { label: 'Active', value: stats.confirmed + stats.in_progress, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-              { label: 'Completed', value: stats.completed, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-              { label: 'Earnings', value: `₹${stats.totalEarnings?.toLocaleString()}`, icon: TrendingUp, color: 'text-primary-600', bg: 'bg-primary-50' },
-            ].map((s, i) => (
-              <div key={i} className="card p-4">
-                <div className={`w-9 h-9 ${s.bg} rounded-xl flex items-center justify-center mb-2`}><s.icon className={`w-4 h-4 ${s.color}`} /></div>
-                <p className="text-2xl font-bold text-slate-800">{s.value}</p>
-                <p className="text-xs text-slate-500">{s.label}</p>
+              { label: 'Total requests', value: stats.totalBookings, icon: Package },
+              { label: 'Pending', value: stats.pending, icon: Clock },
+              { label: 'Active jobs', value: (stats.confirmed || 0) + (stats.in_progress || 0), icon: Users },
+              { label: 'Completed', value: stats.completed, icon: CheckCircle2 },
+              { label: 'Earnings', value: stats.totalEarnings?.toLocaleString(), icon: IndianRupee, prefix: 'Rs ' },
+            ].map((item) => (
+              <div key={item.label} className="card px-5 py-5">
+                <div className="mb-4 inline-flex rounded-2xl bg-primary-50 p-3 text-primary-700">
+                  <item.icon className="h-5 w-5" />
+                </div>
+                <p className="font-display text-3xl font-semibold text-ink-900">
+                  {item.prefix || ''}
+                  {item.value}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">{item.label}</p>
               </div>
             ))}
-          </motion.div>
-        )}
+          </div>
+        ) : null}
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button onClick={() => setTab('requests')}
-            className={`chip ${tab === 'requests' ? 'chip-active' : 'chip-inactive'}`}>
-            📋 Requests ({requests.length})
-          </button>
-          <button onClick={() => setTab('services')}
-            className={`chip ${tab === 'services' ? 'chip-active' : 'chip-inactive'}`}>
-            🛠️ My Services ({services.length})
-          </button>
+        <div className="mt-8 flex flex-wrap gap-3">
+          {[
+            { id: 'requests', label: `Requests (${requests.length})` },
+            { id: 'services', label: `My Services (${services.length})` },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              className={`chip ${tab === item.id ? 'chip-active' : 'chip-inactive'}`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
 
-        {/* Requests */}
-        {tab === 'requests' && (
+        {tab === 'requests' ? (
           <>
-            <div className="flex flex-wrap gap-2 mb-6">
-              {['all', 'pending', 'confirmed', 'in_progress', 'completed'].map((f) => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    filter === f ? 'bg-primary-100 text-primary-700' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-                  }`}>
-                  {f === 'all' ? 'All' : f.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+            <div className="mt-6 flex flex-wrap gap-3">
+              {['all', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`chip ${filter === status ? 'chip-active' : 'chip-inactive'}`}
+                >
+                  {status === 'all' ? 'All requests' : formatStatusLabel(status)}
                 </button>
               ))}
             </div>
 
-            {loading ? <div className="space-y-4">{[1,2,3].map(i => <div key={i} className="card p-6 h-28 skeleton" />)}</div>
-            : requests.length === 0 ? (
-              <div className="card p-12 text-center">
-                <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-700">No requests yet</h3>
-                <p className="text-slate-500 mt-2">They'll appear when customers book your services.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {requests.map((b, i) => {
-                  const cfg = statusConfig[b.status]; const Icon = cfg.icon;
-                  return (
-                    <motion.div key={b._id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }} className="card p-6">
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div>
-                              <h3 className="text-lg font-semibold text-slate-800">{b.serviceId?.title}</h3>
-                              <p className="text-sm text-slate-500">Customer: {b.userId?.name}</p>
+            <div className="mt-8">
+              {loading ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="skeleton h-40" />
+                  ))}
+                </div>
+              ) : requests.length === 0 ? (
+                <div className="card-elevated px-8 py-16 text-center">
+                  <div className="mx-auto inline-flex rounded-[28px] bg-primary-50 p-5 text-primary-700">
+                    <Package className="h-8 w-8" />
+                  </div>
+                  <h2 className="mt-6 font-display text-3xl font-semibold text-ink-900">No requests yet</h2>
+                  <p className="mx-auto mt-3 max-w-xl text-slate-600">
+                    Once customers start booking your listings, the request flow will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {requests.map((booking, index) => {
+                    const config = statusConfig[booking.status];
+                    const StatusIcon = config.icon;
+                    const meta = getServiceMeta(booking.serviceId?.category);
+                    const ServiceIcon = meta.icon;
+
+                    return (
+                      <motion.div
+                        key={booking._id}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="card-elevated p-6"
+                      >
+                        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                          <div className="flex items-start gap-4">
+                            <div className={`inline-flex rounded-[24px] bg-gradient-to-br ${meta.gradient} p-4 text-white shadow-soft`}>
+                              <ServiceIcon className="h-6 w-6" />
                             </div>
-                            <span className={`status-badge ${cfg.color} flex items-center gap-1`}><Icon className="w-3 h-3" />{cfg.label}</span>
+                            <div className="max-w-3xl">
+                              <div className="flex flex-wrap items-center gap-3">
+                                <h2 className="font-display text-2xl font-semibold text-ink-900">{booking.serviceId?.title}</h2>
+                                <span className={`status-badge ${config.color}`}>
+                                  <StatusIcon className={`h-3.5 w-3.5 ${booking.status === 'in_progress' ? 'animate-spin' : ''}`} />
+                                  {config.label}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-sm text-slate-500">Customer: {booking.userId?.name}</p>
+
+                              <div className="mt-4 flex flex-wrap gap-3">
+                                <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                  <Calendar className="mr-2 inline h-4 w-4 text-primary-700" />
+                                  {new Date(booking.scheduledDate).toLocaleDateString('en-IN')}
+                                </div>
+                                <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                  <Clock className="mr-2 inline h-4 w-4 text-primary-700" />
+                                  {booking.timeSlot}
+                                </div>
+                                <div className="rounded-2xl bg-primary-50 px-4 py-3 text-sm font-semibold text-primary-700">
+                                  Rs {booking.totalAmount?.toLocaleString()}
+                                </div>
+                              </div>
+
+                              {booking.address ? (
+                                <p className="mt-4 text-sm leading-7 text-slate-600">
+                                  <span className="font-semibold text-ink-900">Address:</span> {booking.address}
+                                </p>
+                              ) : null}
+                            </div>
                           </div>
-                          <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-500">
-                            <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{new Date(b.scheduledDate).toLocaleDateString('en-IN')}</span>
-                            <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{b.timeSlot}</span>
-                            <span className="flex items-center gap-1 text-primary-600 font-semibold"><IndianRupee className="w-4 h-4" />{b.totalAmount?.toLocaleString()}</span>
-                          </div>
-                          {b.address && <p className="mt-2 text-sm text-slate-400">📍 {b.address}</p>}
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            {b.status === 'pending' && (<>
-                              <button onClick={() => handleStatusUpdate(b._id, 'confirmed')} className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100">✓ Accept</button>
-                              <button onClick={() => handleStatusUpdate(b._id, 'cancelled')} className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100">✕ Decline</button>
-                            </>)}
-                            {b.status === 'confirmed' && <button onClick={() => handleStatusUpdate(b._id, 'in_progress')} className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">🔄 Start Work</button>}
-                            {b.status === 'in_progress' && <button onClick={() => handleStatusUpdate(b._id, 'completed')} className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100">✓ Mark Done</button>}
-                            <button onClick={() => navigate(`/chat?to=${b.userId?._id}`)} className="px-3 py-1.5 text-xs font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 flex items-center gap-1"><MessageSquare className="w-3 h-3" /> Chat</button>
+
+                          <div className="flex flex-wrap gap-3 xl:max-w-[300px] xl:justify-end">
+                            {booking.status === 'pending' ? (
+                              <>
+                                <button onClick={() => handleStatusUpdate(booking._id, 'confirmed')} className="btn-primary">
+                                  Accept
+                                </button>
+                                <button onClick={() => handleStatusUpdate(booking._id, 'cancelled')} className="btn-secondary">
+                                  Decline
+                                </button>
+                              </>
+                            ) : null}
+
+                            {booking.status === 'confirmed' ? (
+                              <button onClick={() => handleStatusUpdate(booking._id, 'in_progress')} className="btn-primary">
+                                Start work
+                              </button>
+                            ) : null}
+
+                            {booking.status === 'in_progress' ? (
+                              <button onClick={() => handleStatusUpdate(booking._id, 'completed')} className="btn-primary">
+                                Mark completed
+                              </button>
+                            ) : null}
+
+                            <button
+                              onClick={() => navigate(`/chat?to=${booking.userId?._id}`)}
+                              className="btn-secondary inline-flex items-center justify-center gap-2"
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                              Chat
+                            </button>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </>
-        )}
-
-        {/* Services */}
-        {tab === 'services' && (
+        ) : (
           <>
-            <div className="flex justify-between items-center mb-6">
-              <p className="text-slate-500">{services.length} services listed</p>
-              <button onClick={() => { resetForm(); setShowServiceForm(true); }} className="btn-primary flex items-center gap-2 text-sm"><Plus className="w-4 h-4" /> Add Service</button>
+            <div className="mt-8 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500">Listings</p>
+                <p className="mt-1 font-display text-2xl font-semibold text-ink-900">{services.length} active services</p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingService(null);
+                  setServiceForm(initialServiceForm);
+                  setShowServiceForm(true);
+                }}
+                className="btn-primary inline-flex items-center justify-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add service
+              </button>
             </div>
 
-            {showServiceForm && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={resetForm}>
-                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-                  className="card-elevated p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold text-slate-800">{editingService ? 'Edit Service' : 'Add New Service'}</h3>
-                    <button onClick={resetForm} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-400" /></button>
+            <div className="mt-8">
+              {services.length === 0 ? (
+                <div className="card-elevated px-8 py-16 text-center">
+                  <div className="mx-auto inline-flex rounded-[28px] bg-primary-50 p-5 text-primary-700">
+                    <ShieldCheck className="h-8 w-8" />
                   </div>
-                  <form onSubmit={handleServiceSubmit} className="space-y-4">
-                    <div><label className="text-sm text-slate-600 mb-1 block">Title</label>
-                      <input type="text" value={serviceForm.title} onChange={e => setServiceForm({...serviceForm, title: e.target.value})} className="input-field" required placeholder="e.g. Home Wiring" /></div>
-                    <div><label className="text-sm text-slate-600 mb-1 block">Description</label>
-                      <textarea value={serviceForm.description} onChange={e => setServiceForm({...serviceForm, description: e.target.value})} className="input-field resize-none" rows={3} required /></div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div><label className="text-sm text-slate-600 mb-1 block">Category</label>
-                        <select value={serviceForm.category} onChange={e => setServiceForm({...serviceForm, category: e.target.value})} className="input-field">
-                          {['electrician','plumber','tutor','delivery','cleaning','painting','carpentry','other'].map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
-                        </select></div>
-                      <div><label className="text-sm text-slate-600 mb-1 block">Price Type</label>
-                        <select value={serviceForm.priceUnit} onChange={e => setServiceForm({...serviceForm, priceUnit: e.target.value})} className="input-field">
-                          <option value="fixed">Fixed</option><option value="per_hour">Per Hour</option>
-                        </select></div>
-                    </div>
-                    <div><label className="text-sm text-slate-600 mb-1 block">Price (₹)</label>
-                      <input type="number" value={serviceForm.price} onChange={e => setServiceForm({...serviceForm, price: e.target.value})} className="input-field" required min="0" /></div>
-                    <div><label className="text-sm text-slate-600 mb-1 block">Image URL (optional)</label>
-                      <input type="url" value={serviceForm.image} onChange={e => setServiceForm({...serviceForm, image: e.target.value})} className="input-field" placeholder="https://..." /></div>
-                    <button type="submit" className="btn-primary w-full">{editingService ? 'Update' : 'Create'} Service</button>
-                  </form>
-                </motion.div>
-              </motion.div>
-            )}
+                  <h2 className="mt-6 font-display text-3xl font-semibold text-ink-900">No services listed yet</h2>
+                  <p className="mx-auto mt-3 max-w-xl text-slate-600">
+                    Start with one clear listing. Transparent titles and pricing make the product feel more trustworthy.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-5 md:grid-cols-2">
+                  {services.map((service, index) => {
+                    const meta = getServiceMeta(service.category);
+                    const ServiceIcon = meta.icon;
 
-            {services.length === 0 ? (
-              <div className="card p-12 text-center">
-                <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-700">No services yet</h3>
-                <p className="text-slate-500 mt-2">Create your first listing to get bookings.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {services.map((s, i) => (
-                  <motion.div key={s._id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }} className="card p-5">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-100 to-accent-100 flex items-center justify-center text-xl shrink-0">
-                          {s.category === 'electrician' ? '⚡' : s.category === 'plumber' ? '🔧' : s.category === 'tutor' ? '📚' : '🚚'}
+                    return (
+                      <motion.div
+                        key={service._id}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="card-elevated p-6"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-4">
+                            <div className={`inline-flex rounded-[24px] bg-gradient-to-br ${meta.gradient} p-4 text-white shadow-soft`}>
+                              <ServiceIcon className="h-6 w-6" />
+                            </div>
+                            <div>
+                              <p className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${meta.badge}`}>
+                                {meta.label}
+                              </p>
+                              <h2 className="mt-3 font-display text-2xl font-semibold text-ink-900">{service.title}</h2>
+                              <p className="mt-2 text-sm leading-7 text-slate-600">{service.description}</p>
+                              <p className="mt-4 text-sm font-semibold text-primary-700">
+                                Rs {service.price?.toLocaleString()} · {formatPriceUnit(service.priceUnit)}
+                              </p>
+                              {service.totalRatings > 0 ? (
+                                <p className="mt-2 text-sm text-slate-500">
+                                  Rating {service.avgRating} from {service.totalRatings} reviews
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => editService(service)}
+                              className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-500 transition-colors hover:text-primary-700"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteService(service._id)}
+                              className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-500 transition-colors hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-800">{s.title}</h3>
-                          <p className="text-sm text-slate-500 capitalize">{s.category}</p>
-                          <p className="text-sm text-primary-600 font-semibold mt-1">₹{s.price?.toLocaleString()} / {s.priceUnit === 'per_hour' ? 'hr' : 'fixed'}</p>
-                          {s.totalRatings > 0 && <p className="text-xs text-slate-400 mt-1">⭐ {s.avgRating} ({s.totalRatings})</p>}
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <button onClick={() => editSvc(s)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary-600"><Edit3 className="w-4 h-4" /></button>
-                        <button onClick={() => handleDeleteService(s._id)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
+
+      {showServiceForm ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
+          onClick={resetForm}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="card-elevated max-h-[90vh] w-full max-w-2xl overflow-y-auto p-7"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Service editor</p>
+                <h2 className="mt-2 font-display text-3xl font-semibold text-ink-900">
+                  {editingService ? 'Update listing' : 'Create a new listing'}
+                </h2>
+              </div>
+              <button
+                onClick={resetForm}
+                className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-500 transition-colors hover:text-primary-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleServiceSubmit} className="mt-6 space-y-5">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-600">Service title</label>
+                <input
+                  type="text"
+                  value={serviceForm.title}
+                  onChange={(event) => setServiceForm({ ...serviceForm, title: event.target.value })}
+                  className="input-field"
+                  placeholder="Example: Home electrical repair"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-600">Description</label>
+                <textarea
+                  value={serviceForm.description}
+                  onChange={(event) => setServiceForm({ ...serviceForm, description: event.target.value })}
+                  className="input-field resize-none"
+                  rows={4}
+                  placeholder="Describe the service clearly so customers know what they are booking."
+                  required
+                />
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-600">Category</label>
+                  <select
+                    value={serviceForm.category}
+                    onChange={(event) => setServiceForm({ ...serviceForm, category: event.target.value })}
+                    className="input-field"
+                  >
+                    {['electrician', 'plumber', 'tutor', 'delivery', 'cleaning', 'painting', 'carpentry', 'other'].map((category) => (
+                      <option key={category} value={category}>
+                        {formatStatusLabel(category)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-600">Price type</label>
+                  <select
+                    value={serviceForm.priceUnit}
+                    onChange={(event) => setServiceForm({ ...serviceForm, priceUnit: event.target.value })}
+                    className="input-field"
+                  >
+                    <option value="fixed">Fixed</option>
+                    <option value="per_hour">Per hour</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-600">Price</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={serviceForm.price}
+                    onChange={(event) => setServiceForm({ ...serviceForm, price: event.target.value })}
+                    className="input-field"
+                    placeholder="Enter your price"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-600">Image URL</label>
+                  <input
+                    type="url"
+                    value={serviceForm.image}
+                    onChange={(event) => setServiceForm({ ...serviceForm, image: event.target.value })}
+                    className="input-field"
+                    placeholder="Optional image URL"
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className="btn-primary w-full">
+                {editingService ? 'Save changes' : 'Create service'}
+              </button>
+            </form>
+          </motion.div>
+        </motion.div>
+      ) : null}
     </div>
   );
 }

@@ -1,13 +1,29 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Star, MapPin, IndianRupee, Calendar, Phone, MessageSquare, Shield, CheckCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  IndianRupee,
+  MapPin,
+  MessageSquare,
+  Phone,
+  ShieldCheck,
+  Star,
+} from 'lucide-react';
 import { getService, getServiceRatings } from '../api';
-import { useAuth } from '../context/AuthContext';
 import StarRating from '../components/StarRating';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { formatPriceUnit, getServiceMeta } from '../utils/serviceMeta';
 
-const categoryIcons = { electrician: '⚡', plumber: '🔧', tutor: '📚', delivery: '🚚', cleaning: '🧹', painting: '🎨', carpentry: '🪚', other: '🛠️' };
+const guarantees = [
+  'Provider details visible before booking',
+  'Transparent pricing in the service summary',
+  'Status updates and chat after confirmation',
+];
 
 export default function ServiceDetail() {
   const { id } = useParams();
@@ -17,89 +33,207 @@ export default function ServiceDetail() {
   const [ratings, setRatings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadService(); }, [id]);
+  useEffect(() => {
+    const loadService = async () => {
+      try {
+        const [serviceResponse, ratingsResponse] = await Promise.all([getService(id), getServiceRatings(id)]);
+        setService(serviceResponse.data);
+        setRatings(ratingsResponse.data);
+      } catch (error) {
+        toast.error('Service not found');
+        navigate('/services');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const loadService = async () => {
-    try {
-      const [sRes, rRes] = await Promise.all([getService(id), getServiceRatings(id)]);
-      setService(sRes.data);
-      setRatings(rRes.data);
-    } catch { toast.error('Service not found'); navigate('/services'); }
-    finally { setLoading(false); }
-  };
+    loadService();
+  }, [id, navigate]);
 
   const handleBook = () => {
-    if (!user) { toast.error('Please login to book'); navigate('/login'); return; }
-    if (user.role !== 'customer') { toast.error('Only customers can book'); return; }
+    if (!user) {
+      toast.error('Please sign in before booking');
+      navigate('/login');
+      return;
+    }
+
+    if (user.role !== 'customer') {
+      toast.error('Only customers can create bookings');
+      return;
+    }
+
     navigate(`/booking/${id}`);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="max-w-4xl mx-auto"><div className="h-72 skeleton rounded-2xl mb-6" /><div className="h-8 w-1/2 skeleton mb-4" /><div className="h-4 w-full skeleton mb-2" /></div>
+      <div className="pb-16 pt-28">
+        <div className="section-shell">
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="space-y-6">
+              <div className="skeleton h-[340px]" />
+              <div className="skeleton h-10 w-2/3" />
+              <div className="skeleton h-5 w-full" />
+              <div className="skeleton h-5 w-5/6" />
+            </div>
+            <div className="skeleton h-[420px]" />
+          </div>
+        </div>
       </div>
     );
   }
+
   if (!service) return null;
 
+  const meta = getServiceMeta(service.category);
+  const Icon = meta.icon;
+
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
-      <div className="max-w-4xl mx-auto">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-6 transition-colors">
-          <ArrowLeft className="w-5 h-5" /> Back to Services
+    <div className="pb-16 pt-28">
+      <div className="section-shell">
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-primary-700"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to services
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main */}
-          <div className="lg:col-span-2 space-y-6">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative rounded-2xl overflow-hidden h-72 shadow-soft">
-              {service.image ? <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
-                : <div className="w-full h-full bg-gradient-to-br from-primary-400/30 to-accent-400/30 flex items-center justify-center text-8xl">{categoryIcons[service.category]}</div>}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent" />
-              <div className="absolute bottom-4 left-4">
-                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-white/90 text-slate-700 shadow-sm capitalize">
-                  {categoryIcons[service.category]} {service.category}
-                </span>
-              </div>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-              <h1 className="text-3xl font-bold text-slate-800 mb-2">{service.title}</h1>
-              <div className="flex flex-wrap items-center gap-4 mb-6">
-                {service.totalRatings > 0 && (
-                  <div className="flex items-center gap-2">
-                    <StarRating rating={Math.round(service.avgRating)} size="sm" />
-                    <span className="text-sm text-slate-500">{service.avgRating} ({service.totalRatings} reviews)</span>
+        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card-elevated overflow-hidden">
+              <div className="relative h-[320px] overflow-hidden bg-slate-950">
+                {service.image ? (
+                  <img src={service.image} alt={service.title} className="h-full w-full object-cover" />
+                ) : null}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${meta.gradient} ${
+                    service.image ? 'opacity-40 mix-blend-multiply' : ''
+                  }`}
+                />
+                {!service.image && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="rounded-[32px] border border-white/15 bg-white/12 p-7 text-white backdrop-blur">
+                      <Icon className="h-16 w-16" />
+                    </div>
                   </div>
                 )}
-                <div className="flex items-center gap-1 text-slate-500">
-                  <Shield className="w-4 h-4 text-emerald-500" /><span className="text-sm">Verified Provider</span>
+                <div className="absolute left-5 top-5 flex flex-wrap gap-3">
+                  <span className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${meta.badge}`}>
+                    <Icon className="h-4 w-4" />
+                    {meta.label}
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/12 px-4 py-2 text-sm font-semibold text-white backdrop-blur">
+                    <ShieldCheck className="h-4 w-4" />
+                    Verified provider
+                  </span>
                 </div>
               </div>
-              <div className="card p-6">
-                <h3 className="text-lg font-semibold text-slate-800 mb-3">About this Service</h3>
-                <p className="text-slate-600 leading-relaxed">{service.description}</p>
+
+              <div className="p-7 sm:p-8">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div>
+                    <h1 className="font-display text-4xl font-semibold text-ink-900">{service.title}</h1>
+                    <p className="mt-3 text-base text-slate-600">
+                      Book with clear pricing, ratings, and direct communication built into the flow.
+                    </p>
+                  </div>
+
+                  <div className="rounded-[28px] bg-primary-50 px-5 py-4">
+                    <div className="inline-flex items-center gap-1 text-primary-700">
+                      <IndianRupee className="h-5 w-5" />
+                      <span className="font-display text-3xl font-semibold">{service.price?.toLocaleString()}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-primary-700">{formatPriceUnit(service.priceUnit)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-[24px] bg-slate-50 px-5 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Rating</p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+                      <p className="text-lg font-semibold text-ink-900">
+                        {service.totalRatings > 0 ? service.avgRating : 'New'}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {service.totalRatings > 0 ? `${service.totalRatings} reviews` : 'No reviews yet'}
+                    </p>
+                  </div>
+
+                  <div className="rounded-[24px] bg-slate-50 px-5 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Booking support</p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary-700" />
+                      <p className="text-lg font-semibold text-ink-900">Quick scheduling</p>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">Choose a date and time slot in one flow.</p>
+                  </div>
+
+                  <div className="rounded-[24px] bg-slate-50 px-5 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Trust signal</p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-primary-700" />
+                      <p className="text-lg font-semibold text-ink-900">Profile transparency</p>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">Provider identity and contact details stay visible.</p>
+                  </div>
+                </div>
+
+                <div className="mt-8 rounded-[28px] border border-slate-200 bg-white p-6">
+                  <h2 className="font-display text-2xl font-semibold text-ink-900">About this service</h2>
+                  <p className="mt-4 text-base leading-8 text-slate-600">{service.description}</p>
+                </div>
               </div>
             </motion.div>
 
-            {/* Reviews */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card p-6">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">Reviews ({ratings.length})</h3>
-              {ratings.length === 0 ? <p className="text-slate-500">No reviews yet.</p> : (
-                <div className="space-y-4">
-                  {ratings.map((r) => (
-                    <div key={r._id} className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center">
-                            <span className="text-xs font-bold text-white">{r.userId?.name?.charAt(0) || 'U'}</span>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card p-7">
+              <h2 className="font-display text-2xl font-semibold text-ink-900">What makes this listing feel safe to book</h2>
+              <div className="mt-5 grid gap-4">
+                {guarantees.map((item) => (
+                  <div key={item} className="flex items-start gap-3 rounded-[24px] bg-slate-50 px-4 py-4">
+                    <div className="rounded-2xl bg-primary-50 p-2 text-primary-700">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <p className="text-sm leading-7 text-slate-600">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="card p-7">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-2xl font-semibold text-ink-900">Customer reviews</h2>
+                  <p className="mt-1 text-sm text-slate-500">{ratings.length} review entries</p>
+                </div>
+              </div>
+
+              {ratings.length === 0 ? (
+                <div className="mt-6 rounded-[28px] bg-slate-50 px-6 py-10 text-center">
+                  <p className="font-display text-2xl font-semibold text-ink-900">No reviews yet</p>
+                  <p className="mt-2 text-sm text-slate-500">This service is new, so customers have not rated it yet.</p>
+                </div>
+              ) : (
+                <div className="mt-6 space-y-4">
+                  {ratings.map((rating) => (
+                    <div key={rating._id} className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-600 to-accent-500 text-sm font-bold text-white">
+                            {rating.userId?.name?.charAt(0)?.toUpperCase() || 'U'}
                           </div>
-                          <div><p className="text-sm font-medium text-slate-800">{r.userId?.name}</p><StarRating rating={r.rating} size="sm" /></div>
+                          <div>
+                            <p className="font-semibold text-ink-900">{rating.userId?.name || 'Customer'}</p>
+                            <div className="mt-2">
+                              <StarRating rating={rating.rating} size="sm" />
+                            </div>
+                          </div>
                         </div>
-                        <span className="text-xs text-slate-400">{new Date(r.createdAt).toLocaleDateString()}</span>
+                        <p className="text-sm text-slate-400">{new Date(rating.createdAt).toLocaleDateString('en-IN')}</p>
                       </div>
-                      {r.review && <p className="text-sm text-slate-600 mt-2">{r.review}</p>}
+                      {rating.review ? <p className="mt-4 text-sm leading-7 text-slate-600">{rating.review}</p> : null}
                     </div>
                   ))}
                 </div>
@@ -107,47 +241,80 @@ export default function ServiceDetail() {
             </motion.div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }} className="card p-6 sticky top-24">
-              <div className="mb-6">
-                <div className="flex items-center gap-1 mb-1">
-                  <IndianRupee className="w-6 h-6 text-primary-600" />
-                  <span className="text-3xl font-bold text-primary-600">{service.price?.toLocaleString()}</span>
+            <motion.div
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.05 }}
+              className="card-elevated sticky top-28 p-7"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Booking summary</p>
+              <div className="mt-4 rounded-[28px] bg-slate-950 p-6 text-white">
+                <p className="text-sm text-slate-300">Starting price</p>
+                <div className="mt-2 inline-flex items-center gap-1">
+                  <IndianRupee className="h-6 w-6" />
+                  <span className="font-display text-4xl font-semibold">{service.price?.toLocaleString()}</span>
                 </div>
-                <span className="text-sm text-slate-500">{service.priceUnit === 'per_hour' ? 'per hour' : 'fixed price'}</span>
+                <p className="mt-2 text-sm text-slate-300">{formatPriceUnit(service.priceUnit)}</p>
               </div>
-              <div className="space-y-3 mb-6">
-                {['Instant booking confirmation', 'Free cancellation up to 24hrs', 'Satisfaction guaranteed'].map((t, i) => (
-                  <div key={i} className="flex items-center gap-3 text-slate-600">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" /><span className="text-sm">{t}</span>
+
+              <div className="mt-5 space-y-3">
+                {[
+                  'Book a time slot in minutes',
+                  'Keep provider details visible throughout',
+                  'Use in-app chat for quick coordination',
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                    <CheckCircle2 className="h-4 w-4 text-primary-700" />
+                    <span className="text-sm text-slate-600">{item}</span>
                   </div>
                 ))}
               </div>
-              <button onClick={handleBook} className="btn-primary w-full flex items-center justify-center gap-2 !py-4 text-lg">
-                <Calendar className="w-5 h-5" /> Book Now
+
+              <button onClick={handleBook} className="btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 !py-4 text-base">
+                <Calendar className="h-5 w-5" />
+                Book this service
               </button>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} className="card p-6">
-              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Service Provider</h3>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center">
-                  <span className="text-lg font-bold text-white">{service.providerId?.name?.charAt(0)}</span>
+            <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.12 }} className="card p-7">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Provider information</p>
+              <div className="mt-5 flex items-start gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-gradient-to-br from-primary-600 to-accent-500 text-lg font-bold text-white">
+                  {service.providerId?.name?.charAt(0)?.toUpperCase() || 'P'}
                 </div>
-                <div><p className="font-semibold text-slate-800">{service.providerId?.name}</p><p className="text-sm text-slate-500 capitalize">{service.category} Expert</p></div>
+                <div>
+                  <h2 className="font-display text-2xl font-semibold text-ink-900">{service.providerId?.name || 'Provider'}</h2>
+                  <p className="mt-1 text-sm text-slate-500">{meta.label} specialist</p>
+                </div>
               </div>
-              {service.providerId?.bio && <p className="text-sm text-slate-600 mb-4">{service.providerId.bio}</p>}
-              <div className="space-y-2">
-                {service.providerId?.location && <div className="flex items-center gap-2 text-sm text-slate-500"><MapPin className="w-4 h-4" />{service.providerId.location}</div>}
-                {service.providerId?.phone && <div className="flex items-center gap-2 text-sm text-slate-500"><Phone className="w-4 h-4" />{service.providerId.phone}</div>}
+
+              {service.providerId?.bio ? <p className="mt-5 text-sm leading-7 text-slate-600">{service.providerId.bio}</p> : null}
+
+              <div className="mt-5 space-y-3">
+                {service.providerId?.location ? (
+                  <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    <MapPin className="h-4 w-4 text-slate-400" />
+                    {service.providerId.location}
+                  </div>
+                ) : null}
+                {service.providerId?.phone ? (
+                  <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    <Phone className="h-4 w-4 text-slate-400" />
+                    {service.providerId.phone}
+                  </div>
+                ) : null}
               </div>
-              {user && user.role === 'customer' && (
-                <button onClick={() => navigate(`/chat?to=${service.providerId._id}`)}
-                  className="btn-secondary w-full mt-4 flex items-center justify-center gap-2">
-                  <MessageSquare className="w-4 h-4" /> Message Provider
+
+              {user?.role === 'customer' ? (
+                <button
+                  onClick={() => navigate(`/chat?to=${service.providerId?._id}`)}
+                  className="btn-secondary mt-6 inline-flex w-full items-center justify-center gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Message provider
                 </button>
-              )}
+              ) : null}
             </motion.div>
           </div>
         </div>

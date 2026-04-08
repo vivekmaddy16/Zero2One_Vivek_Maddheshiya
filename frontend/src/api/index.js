@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 });
 
 // Attach token to every request
@@ -61,5 +61,8 @@ export const sendMessage = (data) => API.post('/messages', data);
 
 // Recommendations
 export const getRecommendations = () => API.get('/recommend');
+
+// Users (for chat)
+export const getUserById = (id) => API.get(`/auth/user/${id}`);
 
 export default API;

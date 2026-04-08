@@ -98,13 +98,13 @@ const seedData = async () => {
         tags: ['wiring', 'installation', 'repair']
       },
       {
-        title: 'Appliance Repair & Service',
+        title: 'Appliance Repair Services',
         description: 'Expert repair for all home appliances - AC, refrigerator, washing machine, microwave, and more. Quick diagnosis and same-day repair with genuine spare parts.',
         category: 'electrician',
         price: 500,
         priceUnit: 'per_hour',
         providerId: providers[0]._id,
-        image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400',
+        image: '/service-images/appliance-repair.svg',
         avgRating: 4.8,
         totalRatings: 28,
         tags: ['appliance', 'AC', 'repair']
@@ -184,13 +184,13 @@ const seedData = async () => {
         tags: ['science', 'physics', 'JEE']
       },
       {
-        title: 'Coding & Programming Lessons',
+        title: 'Coding & Programming Classes',
         description: 'Learn coding from scratch! Python, JavaScript, web development, and data structures. Project-based learning with real-world applications. Perfect for beginners and intermediate learners.',
         category: 'tutor',
         price: 800,
         priceUnit: 'per_hour',
         providerId: providers[2]._id,
-        image: 'https://images.unsplash.com/photo-1515879218367-8466d910auj7?w=400',
+        image: '/service-images/coding-programming-classes.svg',
         avgRating: 4.7,
         totalRatings: 15,
         tags: ['coding', 'Python', 'web dev']

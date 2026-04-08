@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { loginUser } from '../api';
+import { Eye, EyeOff, Lock, LogIn, Mail, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { loginUser } from '../api';
+import { useAuth } from '../context/AuthContext';
+
+const highlights = [
+  'Clear provider profiles and pricing',
+  'Simple booking and payment flow',
+  'Status updates and in-app messaging',
+];
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -13,79 +19,138 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
+
     try {
       const { data } = await loginUser(formData);
       login(data);
-      toast.success(`Welcome back, ${data.user.name}!`);
+      toast.success(`Welcome back, ${data.user.name}`);
       navigate(data.user.role === 'provider' ? '/provider-dashboard' : '/dashboard');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-24 bg-slate-50">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-primary-100/40 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-accent-100/40 rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen px-4 py-24">
+      <div className="section-shell grid items-center gap-8 lg:grid-cols-[1.05fr_440px]">
+        <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} className="hidden lg:block">
+          <div className="card-elevated overflow-hidden">
+            <div className="bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.18),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(47,155,89,0.12),transparent_22%)] p-10">
+              <span className="eyebrow">Trust-first experience</span>
+              <h1 className="mt-5 font-display text-5xl font-semibold leading-tight text-ink-900">
+                Sign in to the version of Fixify built around confidence.
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-8 text-slate-600">
+                The UI direction you chose keeps trust, pricing, and booking clarity visible across the full product.
+              </p>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative w-full max-w-md">
-        <div className="card-elevated p-8">
-          <div className="text-center mb-8">
-            <Link to="/" className="inline-flex items-center gap-2 mb-6">
-              <img src="/logo.png" alt="Fixify" className="w-12 h-12 rounded-xl object-cover" />
-            </Link>
-            <h1 className="text-3xl font-bold text-slate-800">Welcome Back</h1>
-            <p className="text-slate-500 mt-2">Sign in to your Fixify account</p>
-          </div>
+              <div className="mt-8 grid gap-4">
+                {highlights.map((item) => (
+                  <div key={item} className="flex items-center gap-3 rounded-[24px] border border-[#eadfc8] bg-white/80 px-5 py-4 backdrop-blur">
+                    <ShieldCheck className="h-5 w-5 text-accent-600" />
+                    <span className="text-sm text-ink-900">{item}</span>
+                  </div>
+                ))}
+              </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="text-sm font-medium text-slate-600 mb-2 block">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="your@email.com" className="input-field !pl-12" required />
+              <div className="mt-8 rounded-[28px] border border-[#eadfc8] bg-white/70 p-6 backdrop-blur">
+                <p className="text-sm text-slate-500">Demo accounts</p>
+                <div className="mt-4 grid gap-3 text-sm text-slate-600">
+                  <div className="rounded-2xl bg-white px-4 py-3">
+                    Customer: <span className="font-semibold">rahul@test.com</span>
+                  </div>
+                  <div className="rounded-2xl bg-white px-4 py-3">
+                    Provider: <span className="font-semibold">amit@test.com</span>
+                  </div>
+                  <div className="rounded-2xl bg-white px-4 py-3">
+                    Password: <span className="font-semibold">password123</span>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="card-elevated p-8 sm:p-10">
+          <Link to="/" className="inline-flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#f2e4c5] bg-white shadow-soft">
+              <img src="/logo.png" alt="Fixify" className="h-10 w-10 rounded-xl object-cover" />
+            </div>
             <div>
-              <label className="text-sm font-medium text-slate-600 mb-2 block">Password</label>
+              <p className="font-display text-xl font-semibold text-ink-900">Fixify</p>
+              <p className="text-sm text-slate-500">Trusted local services</p>
+            </div>
+          </Link>
+
+          <div className="mt-8">
+            <span className="eyebrow">Sign in</span>
+            <h2 className="mt-5 font-display text-4xl font-semibold text-ink-900">Welcome back</h2>
+            <p className="mt-3 text-slate-600">Access bookings, provider dashboards, payments, and chat.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-600">Email</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input type={showPassword ? 'text' : 'password'} value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="••••••••" className="input-field !pl-12 !pr-12" required />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(event) => setFormData({ ...formData, email: event.target.value })}
+                  className="input-field !pl-12"
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-600">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(event) => setFormData({ ...formData, password: event.target.value })}
+                  className="input-field !pl-12 !pr-12"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-primary-700"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 !py-3.5">
-              {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                : <><LogIn className="w-5 h-5" /> Sign In</>}
+
+            <button type="submit" disabled={loading} className="btn-primary inline-flex w-full items-center justify-center gap-2 !py-4 text-base">
+              {loading ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                <>
+                  <LogIn className="h-5 w-5" />
+                  Sign in to Fixify
+                </>
+              )}
             </button>
           </form>
 
-          <div className="mt-6 p-4 rounded-xl bg-primary-50 border border-primary-100">
-            <p className="text-xs font-semibold text-primary-700 mb-2">Demo Accounts</p>
-            <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
-              <div><p className="font-medium text-slate-700">Customer</p><p>rahul@test.com</p></div>
-              <div><p className="font-medium text-slate-700">Provider</p><p>amit@test.com</p></div>
-              <p className="col-span-2 text-slate-400 mt-1">Password: password123</p>
-            </div>
-          </div>
-
-          <p className="text-center text-sm text-slate-500 mt-6">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">Create Account</Link>
+          <p className="mt-6 text-center text-sm text-slate-500">
+            Do not have an account?{' '}
+            <Link to="/register" className="font-semibold text-primary-700 transition-colors hover:text-primary-800">
+              Create one
+            </Link>
           </p>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }
