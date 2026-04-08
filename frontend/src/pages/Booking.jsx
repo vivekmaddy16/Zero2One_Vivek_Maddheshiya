@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import { createBooking, getService } from '../api';
 import MapView from '../components/MapView';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { formatPriceUnit, getServiceMeta } from '../utils/serviceMeta';
 
 const timeSlots = [
@@ -43,6 +44,7 @@ export default function Booking() {
   const { serviceId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { socket } = useSocket();
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -88,13 +90,21 @@ export default function Booking() {
     setSubmitting(true);
 
     try {
-      await createBooking({
+      const { data } = await createBooking({
         serviceId,
         ...formData,
         address: formData.address.trim(),
         customerLat: customerHasCoords ? customerCoords.lat : null,
         customerLng: customerHasCoords ? customerCoords.lng : null,
       });
+
+      if (socket && data?.providerId?._id) {
+        socket.emit('bookingUpdate', {
+          targetUserId: data.providerId._id,
+          booking: data,
+        });
+      }
+
       toast.success('Booking created successfully');
       navigate('/dashboard');
     } catch (error) {

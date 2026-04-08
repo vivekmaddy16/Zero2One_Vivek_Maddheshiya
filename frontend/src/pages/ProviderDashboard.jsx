@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Calendar,
@@ -27,7 +27,12 @@ import {
   updateBookingStatus,
   updateService,
 } from '../api';
+import BookingLiveMap from '../components/BookingLiveMap';
+import BookingTimeline from '../components/BookingTimeline';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
+import useLiveBookingLocation, { applyBookingLocationUpdate } from '../hooks/useLiveBookingLocation';
+import { getBookingRealtimeMessage } from '../utils/bookingTimeline';
 import { formatPriceUnit, formatStatusLabel, getServiceMeta } from '../utils/serviceMeta';
 
 const statusConfig = {
@@ -49,6 +54,7 @@ const initialServiceForm = {
 
 export default function ProviderDashboard() {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const navigate = useNavigate();
   const [tab, setTab] = useState('requests');
   const [requests, setRequests] = useState([]);
@@ -59,6 +65,21 @@ export default function ProviderDashboard() {
   const [showServiceForm, setShowServiceForm] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [serviceForm, setServiceForm] = useState(initialServiceForm);
+
+  const handleLocationPatch = useCallback((payload) => {
+    setRequests((current) => applyBookingLocationUpdate(current, payload));
+  }, []);
+
+  const {
+    hasTrackableBookings,
+    isSharing: isSharingLocation,
+    locationError,
+  } = useLiveBookingLocation({
+    bookings: requests,
+    role: 'provider',
+    socket,
+    onLocationPatch: handleLocationPatch,
+  });
 
   useEffect(() => {
     const loadData = async () => {
@@ -99,9 +120,29 @@ export default function ProviderDashboard() {
     }
   };
 
+  useEffect(() => {
+    if (!socket) return undefined;
+
+    const handleBookingNotification = (booking) => {
+      toast.success(getBookingRealtimeMessage(booking?.status, 'provider'));
+      refreshData();
+    };
+
+    socket.on('bookingNotification', handleBookingNotification);
+    return () => {
+      socket.off('bookingNotification', handleBookingNotification);
+    };
+  }, [socket, filter]);
+
   const handleStatusUpdate = async (id, status) => {
     try {
-      await updateBookingStatus(id, status);
+      const { data } = await updateBookingStatus(id, status);
+      if (socket && data?.userId?._id) {
+        socket.emit('bookingUpdate', {
+          targetUserId: data.userId._id,
+          booking: data,
+        });
+      }
       toast.success(`Booking marked ${formatStatusLabel(status).toLowerCase()}`);
       refreshData();
     } catch (error) {
@@ -303,6 +344,15 @@ export default function ProviderDashboard() {
                                   <span className="font-semibold text-ink-900">Address:</span> {booking.address}
                                 </p>
                               ) : null}
+
+                              <BookingTimeline status={booking.status} />
+                              <BookingLiveMap
+                                booking={booking}
+                                role="provider"
+                                isSharing={isSharingLocation}
+                                locationError={locationError}
+                                hasTrackableBookings={hasTrackableBookings}
+                              />
                             </div>
                           </div>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Calendar,
@@ -21,10 +21,15 @@ import {
   getRecommendations,
   updateBookingStatus,
 } from '../api';
+import BookingLiveMap from '../components/BookingLiveMap';
+import BookingTimeline from '../components/BookingTimeline';
 import PaymentModal from '../components/PaymentModal';
 import RatingModal from '../components/RatingModal';
 import ServiceCard from '../components/ServiceCard';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
+import useLiveBookingLocation, { applyBookingLocationUpdate } from '../hooks/useLiveBookingLocation';
+import { getBookingRealtimeMessage } from '../utils/bookingTimeline';
 import { formatStatusLabel, getServiceMeta } from '../utils/serviceMeta';
 
 const statusConfig = {
@@ -65,6 +70,7 @@ function normalizeRecommendationPayload(payload) {
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [stats, setStats] = useState(null);
@@ -73,6 +79,21 @@ export default function CustomerDashboard() {
   const [filter, setFilter] = useState('all');
   const [ratingBooking, setRatingBooking] = useState(null);
   const [paymentBooking, setPaymentBooking] = useState(null);
+
+  const handleLocationPatch = useCallback((payload) => {
+    setBookings((current) => applyBookingLocationUpdate(current, payload));
+  }, []);
+
+  const {
+    hasTrackableBookings,
+    isSharing: isSharingLocation,
+    locationError,
+  } = useLiveBookingLocation({
+    bookings,
+    role: 'customer',
+    socket,
+    onLocationPatch: handleLocationPatch,
+  });
 
   useEffect(() => {
     const loadData = async () => {
@@ -113,11 +134,31 @@ export default function CustomerDashboard() {
     }
   };
 
+  useEffect(() => {
+    if (!socket) return undefined;
+
+    const handleBookingNotification = (booking) => {
+      toast.success(getBookingRealtimeMessage(booking?.status, 'customer'));
+      refreshData();
+    };
+
+    socket.on('bookingNotification', handleBookingNotification);
+    return () => {
+      socket.off('bookingNotification', handleBookingNotification);
+    };
+  }, [socket, filter]);
+
   const handleCancel = async (id) => {
     if (!confirm('Cancel this booking?')) return;
 
     try {
-      await updateBookingStatus(id, 'cancelled');
+      const { data } = await updateBookingStatus(id, 'cancelled');
+      if (socket && data?.providerId?._id) {
+        socket.emit('bookingUpdate', {
+          targetUserId: data.providerId._id,
+          booking: data,
+        });
+      }
       toast.success('Booking cancelled');
       refreshData();
     } catch (error) {
@@ -255,6 +296,15 @@ export default function CustomerDashboard() {
                               <span className="font-semibold text-ink-900">Address:</span> {booking.address}
                             </p>
                           ) : null}
+
+                          <BookingTimeline status={booking.status} />
+                          <BookingLiveMap
+                            booking={booking}
+                            role="customer"
+                            isSharing={isSharingLocation}
+                            locationError={locationError}
+                            hasTrackableBookings={hasTrackableBookings}
+                          />
                         </div>
                       </div>
 

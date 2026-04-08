@@ -46,6 +46,7 @@ export const createBooking = (data) => API.post('/bookings', data);
 export const getMyBookings = (params) => API.get('/bookings/my', { params });
 export const getProviderRequests = (params) => API.get('/bookings/requests', { params });
 export const updateBookingStatus = (id, status) => API.put(`/bookings/${id}/status`, { status });
+export const shareBookingLocation = (id, coords) => API.put(`/bookings/${id}/location`, coords);
 export const markBookingPaid = (id) => API.put(`/bookings/${id}/pay`);
 export const getBookingStats = () => API.get('/bookings/stats');
 

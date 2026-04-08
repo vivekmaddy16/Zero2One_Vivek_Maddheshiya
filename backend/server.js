@@ -84,6 +84,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('bookingLocationUpdate', (data) => {
+    const { targetUserId, location } = data;
+    const targetSocket = onlineUsers.get(targetUserId);
+    if (targetSocket) {
+      io.to(targetSocket).emit('bookingLocationUpdated', location);
+    }
+  });
+
   // Disconnect
   socket.on('disconnect', () => {
     for (const [userId, socketId] of onlineUsers.entries()) {

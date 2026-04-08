@@ -1,5 +1,14 @@
 const Booking = require('../models/Booking');
 const Service = require('../models/Service');
+const User = require('../models/User');
+
+const bookingPopulate = [
+  { path: 'serviceId', select: 'title category price image' },
+  { path: 'providerId', select: 'name email avatar phone location lat lng' },
+  { path: 'userId', select: 'name email avatar phone location lat lng' }
+];
+
+const shareableStatuses = ['pending', 'confirmed', 'in_progress'];
 
 // @desc    Create a booking (Customer only)
 // @route   POST /api/bookings
@@ -12,11 +21,16 @@ exports.createBooking = async (req, res) => {
       return res.status(404).json({ message: 'Service not found' });
     }
 
+    const provider = await User.findById(service.providerId).select('lat lng');
+
     const parsedCustomerLat = customerLat != null ? Number(customerLat) : null;
     const parsedCustomerLng = customerLng != null ? Number(customerLng) : null;
     const hasCustomerCoords = Number.isFinite(parsedCustomerLat) && Number.isFinite(parsedCustomerLng);
     const effectiveCustomerLat = hasCustomerCoords ? parsedCustomerLat : (req.user.lat !== 0 ? req.user.lat : null);
     const effectiveCustomerLng = hasCustomerCoords ? parsedCustomerLng : (req.user.lng !== 0 ? req.user.lng : null);
+    const providerLat = provider?.lat !== 0 ? provider?.lat ?? null : null;
+    const providerLng = provider?.lng !== 0 ? provider?.lng ?? null : null;
+    const now = new Date();
 
     const booking = await Booking.create({
       userId: req.user._id,
@@ -27,15 +41,15 @@ exports.createBooking = async (req, res) => {
       address,
       customerLat: effectiveCustomerLat,
       customerLng: effectiveCustomerLng,
+      customerLocationUpdatedAt: effectiveCustomerLat != null && effectiveCustomerLng != null ? now : null,
+      providerLat,
+      providerLng,
+      providerLocationUpdatedAt: providerLat != null && providerLng != null ? now : null,
       totalAmount: service.price,
       notes
     });
 
-    await booking.populate([
-      { path: 'serviceId', select: 'title category price image' },
-      { path: 'providerId', select: 'name email avatar' },
-      { path: 'userId', select: 'name email avatar' }
-    ]);
+    await booking.populate(bookingPopulate);
 
     res.status(201).json(booking);
   } catch (error) {
@@ -53,7 +67,7 @@ exports.getMyBookings = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate('serviceId', 'title category price image')
-      .populate('providerId', 'name email avatar phone')
+      .populate('providerId', 'name email avatar phone location lat lng')
       .sort({ createdAt: -1 });
 
     res.json(bookings);
@@ -72,7 +86,7 @@ exports.getProviderRequests = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate('serviceId', 'title category price image')
-      .populate('userId', 'name email avatar phone')
+      .populate('userId', 'name email avatar phone location lat lng')
       .sort({ createdAt: -1 });
 
     res.json(bookings);
@@ -118,13 +132,70 @@ exports.updateBookingStatus = async (req, res) => {
     booking.status = status;
     await booking.save();
 
-    await booking.populate([
-      { path: 'serviceId', select: 'title category price image' },
-      { path: 'providerId', select: 'name email avatar' },
-      { path: 'userId', select: 'name email avatar' }
-    ]);
+    await booking.populate(bookingPopulate);
 
     res.json(booking);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update booking live location
+// @route   PUT /api/bookings/:id/location
+exports.updateBookingLiveLocation = async (req, res) => {
+  try {
+    const { lat, lng } = req.body;
+    const parsedLat = Number(lat);
+    const parsedLng = Number(lng);
+
+    if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) {
+      return res.status(400).json({ message: 'Valid latitude and longitude are required' });
+    }
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    const isCustomer = booking.userId.toString() === req.user._id.toString();
+    const isProvider = booking.providerId.toString() === req.user._id.toString();
+
+    if (!isCustomer && !isProvider) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    if (!shareableStatuses.includes(booking.status)) {
+      return res.status(400).json({ message: 'Live location is only available for active bookings' });
+    }
+
+    const now = new Date();
+
+    if (isCustomer) {
+      booking.customerLat = parsedLat;
+      booking.customerLng = parsedLng;
+      booking.customerLocationUpdatedAt = now;
+    }
+
+    if (isProvider) {
+      booking.providerLat = parsedLat;
+      booking.providerLng = parsedLng;
+      booking.providerLocationUpdatedAt = now;
+    }
+
+    await booking.save();
+
+    res.json({
+      _id: booking._id,
+      status: booking.status,
+      userId: booking.userId,
+      providerId: booking.providerId,
+      customerLat: booking.customerLat,
+      customerLng: booking.customerLng,
+      customerLocationUpdatedAt: booking.customerLocationUpdatedAt,
+      providerLat: booking.providerLat,
+      providerLng: booking.providerLng,
+      providerLocationUpdatedAt: booking.providerLocationUpdatedAt,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -41,6 +41,22 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     default: null
   },
+  customerLocationUpdatedAt: {
+    type: Date,
+    default: null
+  },
+  providerLat: {
+    type: Number,
+    default: null
+  },
+  providerLng: {
+    type: Number,
+    default: null
+  },
+  providerLocationUpdatedAt: {
+    type: Date,
+    default: null
+  },
   totalAmount: {
     type: Number,
     required: true
