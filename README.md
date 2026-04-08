@@ -10,7 +10,7 @@
 Zero2One
 
 **Project Name:**
-Neighbourhood Service Marketplace
+Fixify
 
 **Selected Track:**
 Web Development
