@@ -33,6 +33,14 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Address is required']
   },
+  customerLat: {
+    type: Number,
+    default: null
+  },
+  customerLng: {
+    type: Number,
+    default: null
+  },
   totalAmount: {
     type: Number,
     required: true

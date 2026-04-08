@@ -17,7 +17,7 @@ exports.createService = async (req, res) => {
       providerId: req.user._id
     });
 
-    await service.populate('providerId', 'name email avatar location');
+    await service.populate('providerId', 'name email avatar location lat lng');
     res.status(201).json(service);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -55,7 +55,7 @@ exports.getServices = async (req, res) => {
     if (sort === 'rating') sortObj = { avgRating: -1 };
 
     const services = await Service.find(query)
-      .populate('providerId', 'name email avatar location')
+      .populate('providerId', 'name email avatar location lat lng')
       .sort(sortObj);
 
     res.json(services);
@@ -69,7 +69,7 @@ exports.getServices = async (req, res) => {
 exports.getService = async (req, res) => {
   try {
     const service = await Service.findById(req.params.id)
-      .populate('providerId', 'name email avatar location phone bio');
+      .populate('providerId', 'name email avatar location lat lng phone bio');
 
     if (!service) {
       return res.status(404).json({ message: 'Service not found' });
@@ -98,7 +98,7 @@ exports.updateService = async (req, res) => {
     service = await Service.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
-    }).populate('providerId', 'name email avatar location');
+    }).populate('providerId', 'name email avatar location lat lng');
 
     res.json(service);
   } catch (error) {
@@ -132,7 +132,7 @@ exports.deleteService = async (req, res) => {
 exports.getMyServices = async (req, res) => {
   try {
     const services = await Service.find({ providerId: req.user._id })
-      .populate('providerId', 'name email avatar location')
+      .populate('providerId', 'name email avatar location lat lng')
       .sort({ createdAt: -1 });
 
     res.json(services);

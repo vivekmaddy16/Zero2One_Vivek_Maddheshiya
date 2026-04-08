@@ -42,6 +42,29 @@ export default function Register() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const { latitude, longitude } = coords;
+        setFormData((prev) => ({
+          ...prev,
+          lat: latitude,
+          lng: longitude,
+          location: prev.location || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+        }));
+        toast.success('Exact location captured from your device');
+      },
+      () => {
+        toast.error('Unable to access location. Please allow location access and try again.');
+      }
+    );
+  };
   const { login } = useAuth();
   const navigate = useNavigate();
 

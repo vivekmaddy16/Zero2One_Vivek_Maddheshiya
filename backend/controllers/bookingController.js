@@ -5,12 +5,18 @@ const Service = require('../models/Service');
 // @route   POST /api/bookings
 exports.createBooking = async (req, res) => {
   try {
-    const { serviceId, scheduledDate, timeSlot, address, notes } = req.body;
+    const { serviceId, scheduledDate, timeSlot, address, notes, customerLat, customerLng } = req.body;
 
     const service = await Service.findById(serviceId);
     if (!service) {
       return res.status(404).json({ message: 'Service not found' });
     }
+
+    const parsedCustomerLat = customerLat != null ? Number(customerLat) : null;
+    const parsedCustomerLng = customerLng != null ? Number(customerLng) : null;
+    const hasCustomerCoords = Number.isFinite(parsedCustomerLat) && Number.isFinite(parsedCustomerLng);
+    const effectiveCustomerLat = hasCustomerCoords ? parsedCustomerLat : (req.user.lat !== 0 ? req.user.lat : null);
+    const effectiveCustomerLng = hasCustomerCoords ? parsedCustomerLng : (req.user.lng !== 0 ? req.user.lng : null);
 
     const booking = await Booking.create({
       userId: req.user._id,
@@ -19,6 +25,8 @@ exports.createBooking = async (req, res) => {
       scheduledDate,
       timeSlot,
       address,
+      customerLat: effectiveCustomerLat,
+      customerLng: effectiveCustomerLng,
       totalAmount: service.price,
       notes
     });

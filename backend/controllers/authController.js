@@ -9,7 +9,7 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role, phone, location } = req.body;
+    const { name, email, password, role, phone, location, lat, lng } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -17,7 +17,7 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    const user = await User.create({ name, email, password, role, phone, location });
+    const user = await User.create({ name, email, password, role, phone, location, lat, lng });
 
     const token = generateToken(user._id);
 
@@ -31,7 +31,9 @@ exports.register = async (req, res) => {
         phone: user.phone,
         location: user.location,
         avatar: user.avatar,
-        bio: user.bio
+        bio: user.bio,
+        lat: user.lat,
+        lng: user.lng
       }
     });
   } catch (error) {
@@ -67,7 +69,9 @@ exports.login = async (req, res) => {
         phone: user.phone,
         location: user.location,
         avatar: user.avatar,
-        bio: user.bio
+        bio: user.bio,
+        lat: user.lat,
+        lng: user.lng
       }
     });
   } catch (error) {
@@ -88,8 +92,28 @@ exports.getMe = async (req, res) => {
       phone: user.phone,
       location: user.location,
       avatar: user.avatar,
-      bio: user.bio
+      bio: user.bio,
+      lat: user.lat,
+      lng: user.lng
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Forgot password
+// @route   POST /api/auth/forgot-password
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (user) {
+      // In a real app, send a password reset email with a secure token.
+      // Here we return a generic response to avoid leaking account existence.
+    }
+
+    res.json({ message: 'If an account with that email exists, you will receive reset instructions shortly.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -99,10 +123,10 @@ exports.getMe = async (req, res) => {
 // @route   PUT /api/auth/profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, phone, location, bio, avatar } = req.body;
+    const { name, phone, location, bio, avatar, lat, lng } = req.body;
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { name, phone, location, bio, avatar },
+      { name, phone, location, bio, avatar, lat, lng },
       { new: true, runValidators: true }
     );
     res.json(user);

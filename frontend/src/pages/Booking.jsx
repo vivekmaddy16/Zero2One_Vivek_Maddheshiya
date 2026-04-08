@@ -40,6 +40,7 @@ const bookingSteps = [
 export default function Booking() {
   const { serviceId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -158,6 +159,31 @@ export default function Booking() {
                   <p className="mt-2 text-sm text-slate-500">by {service?.providerId?.name}</p>
                 </div>
               </div>
+              {(typeof service?.providerId?.lat === 'number' && typeof service?.providerId?.lng === 'number') || (customerCoords.lat && customerCoords.lng) ? (
+                <div className="card p-6">
+                  <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Booking map</h3>
+                  <MapView
+                    markers={[
+                      service?.providerId?.lat && service?.providerId?.lng && {
+                        id: 'provider',
+                        label: 'Provider',
+                        lat: service.providerId.lat,
+                        lng: service.providerId.lng,
+                        color: '#2563eb'
+                      },
+                      customerCoords.lat && customerCoords.lng && {
+                        id: 'customer',
+                        label: 'You',
+                        lat: customerCoords.lat,
+                        lng: customerCoords.lng,
+                        color: '#059669'
+                      }
+                    ].filter(Boolean)}
+                    center={typeof service?.providerId?.lat === 'number' && typeof service?.providerId?.lng === 'number' ? { lat: service.providerId.lat, lng: service.providerId.lng } : { lat: customerCoords.lat, lng: customerCoords.lng }}
+                    zoom={10}
+                  />
+                </div>
+              ) : null}
             </div>
 
             <div className="card p-7">
