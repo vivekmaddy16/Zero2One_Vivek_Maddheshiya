@@ -44,7 +44,23 @@ const userSchema = new mongoose.Schema({
     maxlength: 500
   },
   lat: { type: Number, default: 0 },
-  lng: { type: Number, default: 0 }
+  lng: { type: Number, default: 0 },
+  isAvailable: {
+    type: Boolean,
+    default: false
+  },
+  availableIn: {
+    type: Number,
+    default: null
+  },
+  availabilityUpdatedAt: {
+    type: Date,
+    default: null
+  },
+  acceptsEmergency: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true
 });

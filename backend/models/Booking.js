@@ -24,9 +24,18 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Time slot is required']
   },
+  isEmergency: {
+    type: Boolean,
+    default: false
+  },
+  emergencyType: {
+    type: String,
+    enum: ['electrical', 'plumbing', 'lockout', 'gas_leak', 'other', null],
+    default: null
+  },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'],
+    enum: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'emergency'],
     default: 'pending'
   },
   address: {

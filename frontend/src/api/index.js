@@ -43,12 +43,18 @@ export const getMyServices = () => API.get('/services/my/services');
 
 // Bookings
 export const createBooking = (data) => API.post('/bookings', data);
+export const createEmergencyBooking = (data) => API.post('/bookings/emergency', data);
 export const getMyBookings = (params) => API.get('/bookings/my', { params });
 export const getProviderRequests = (params) => API.get('/bookings/requests', { params });
 export const updateBookingStatus = (id, status) => API.put(`/bookings/${id}/status`, { status });
 export const shareBookingLocation = (id, coords) => API.put(`/bookings/${id}/location`, coords);
 export const markBookingPaid = (id) => API.put(`/bookings/${id}/pay`);
 export const getBookingStats = () => API.get('/bookings/stats');
+
+// Availability
+export const toggleAvailability = (data) => API.put('/availability/toggle', data);
+export const getAvailableProviders = (params) => API.get('/availability/providers', { params });
+export const getEmergencyProviders = (params) => API.get('/availability/emergency-providers', { params });
 
 // Ratings
 export const createRating = (data) => API.post('/ratings', data);

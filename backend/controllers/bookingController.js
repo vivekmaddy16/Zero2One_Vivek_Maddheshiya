@@ -120,7 +120,8 @@ exports.updateBookingStatus = async (req, res) => {
       confirmed: ['in_progress', 'cancelled'],
       in_progress: ['completed', 'cancelled'],
       completed: [],
-      cancelled: []
+      cancelled: [],
+      emergency: ['confirmed', 'in_progress', 'cancelled']
     };
 
     if (!validTransitions[booking.status].includes(status)) {
@@ -248,6 +249,7 @@ exports.getBookingStats = async (req, res) => {
       in_progress: 0,
       completed: 0,
       cancelled: 0,
+      emergency: 0,
       totalEarnings: 0,
       totalBookings: 0
     };
@@ -261,6 +263,109 @@ exports.getBookingStats = async (req, res) => {
     });
 
     res.json(formatted);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Create an emergency booking (Customer only)
+// @route   POST /api/bookings/emergency
+exports.createEmergencyBooking = async (req, res) => {
+  try {
+    const { emergencyType, address, notes, customerLat, customerLng } = req.body;
+
+    if (!address || !address.trim()) {
+      return res.status(400).json({ message: 'Address is required for emergency bookings' });
+    }
+
+    if (!emergencyType) {
+      return res.status(400).json({ message: 'Emergency type is required' });
+    }
+
+    // Map emergency types to service categories
+    const emergencyCategoryMap = {
+      electrical: 'electrician',
+      plumbing: 'plumber',
+      lockout: 'other',
+      gas_leak: 'plumber',
+      other: 'other'
+    };
+
+    const serviceCategory = emergencyCategoryMap[emergencyType] || 'other';
+
+    // Find available emergency providers in the matching category
+    const emergencyProviders = await User.find({
+      role: 'provider',
+      isAvailable: true,
+      acceptsEmergency: true
+    }).select('_id name lat lng');
+
+    // Find services matching the category from emergency providers
+    const providerIds = emergencyProviders.map(p => p._id);
+    let matchingServices = await Service.find({
+      providerId: { $in: providerIds },
+      isActive: true,
+      category: serviceCategory
+    }).populate('providerId', 'name lat lng');
+
+    // If no exact category match, try any service from emergency providers
+    if (matchingServices.length === 0) {
+      matchingServices = await Service.find({
+        providerId: { $in: providerIds },
+        isActive: true
+      }).populate('providerId', 'name lat lng');
+    }
+
+    if (matchingServices.length === 0) {
+      return res.status(404).json({
+        message: 'No emergency providers are available right now. Please try again shortly.'
+      });
+    }
+
+    // Sort by distance if customer coordinates available
+    const parsedCustomerLat = customerLat != null ? Number(customerLat) : null;
+    const parsedCustomerLng = customerLng != null ? Number(customerLng) : null;
+    const hasCustomerCoords = Number.isFinite(parsedCustomerLat) && Number.isFinite(parsedCustomerLng);
+
+    if (hasCustomerCoords) {
+      matchingServices.sort((a, b) => {
+        const aLat = a.providerId?.lat || 0;
+        const aLng = a.providerId?.lng || 0;
+        const bLat = b.providerId?.lat || 0;
+        const bLng = b.providerId?.lng || 0;
+        const distA = Math.sqrt(Math.pow(parsedCustomerLat - aLat, 2) + Math.pow(parsedCustomerLng - aLng, 2));
+        const distB = Math.sqrt(Math.pow(parsedCustomerLat - bLat, 2) + Math.pow(parsedCustomerLng - bLng, 2));
+        return distA - distB;
+      });
+    }
+
+    // Pick the closest available service
+    const selectedService = matchingServices[0];
+    const now = new Date();
+
+    const booking = await Booking.create({
+      userId: req.user._id,
+      serviceId: selectedService._id,
+      providerId: selectedService.providerId._id,
+      scheduledDate: now,
+      timeSlot: 'EMERGENCY',
+      address: address.trim(),
+      isEmergency: true,
+      emergencyType,
+      status: 'emergency',
+      customerLat: hasCustomerCoords ? parsedCustomerLat : (req.user.lat !== 0 ? req.user.lat : null),
+      customerLng: hasCustomerCoords ? parsedCustomerLng : (req.user.lng !== 0 ? req.user.lng : null),
+      customerLocationUpdatedAt: now,
+      providerLat: selectedService.providerId.lat !== 0 ? selectedService.providerId.lat : null,
+      providerLng: selectedService.providerId.lng !== 0 ? selectedService.providerId.lng : null,
+      providerLocationUpdatedAt: now,
+      totalAmount: selectedService.price,
+      notes: notes || `EMERGENCY: ${emergencyType.replace('_', ' ').toUpperCase()}`
+    });
+
+    await booking.populate(bookingPopulate);
+
+    res.status(201).json(booking);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

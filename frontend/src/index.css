@@ -153,10 +153,74 @@
   .chip-inactive {
     @apply border-[#eadfc8] bg-white/95 text-slate-600 hover:border-primary-200 hover:bg-primary-50/60 hover:text-primary-700;
   }
+
+  .btn-emergency {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-700 px-6 py-3.5 text-sm font-bold text-white
+    transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-8px_rgba(239,68,68,0.5)]
+    active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .status-emergency {
+    @apply bg-red-50 text-red-700 border border-red-200;
+  }
+
+  .availability-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold backdrop-blur;
+  }
+
+  .availability-available {
+    @apply border border-emerald-200 bg-emerald-50/95 text-emerald-700;
+  }
+
+  .availability-soon {
+    @apply border border-amber-200 bg-amber-50/95 text-amber-700;
+  }
+
+  .availability-unavailable {
+    @apply border border-slate-200 bg-slate-50/95 text-slate-500;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+
+  .availability-dot-green {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    position: relative;
+  }
+
+  .availability-dot-green::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: #10b981;
+    opacity: 0.4;
+    animation: avail-pulse 2s ease-in-out infinite;
+  }
+
+  .availability-dot-amber {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #f59e0b;
+  }
+
+  .availability-dot-red {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #94a3b8;
+  }
 }
+
+@keyframes avail-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.8); opacity: 0; }
+}
+

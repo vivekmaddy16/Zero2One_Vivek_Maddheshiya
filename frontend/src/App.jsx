@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import EmergencyButton from './components/EmergencyButton';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -40,6 +41,7 @@ function AppLayout() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       {!hideFooter && <Footer />}
+      <EmergencyButton />
       <Toaster
         position="top-right"
         toastOptions={{
@@ -71,3 +73,4 @@ function App() {
 }
 
 export default App;
+

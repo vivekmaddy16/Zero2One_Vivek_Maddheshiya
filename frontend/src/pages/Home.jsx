@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -6,22 +6,29 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Droplets,
+  Flame,
+  KeyRound,
   MessageSquare,
   Search,
   ShieldCheck,
+  Siren,
   Star,
   Users,
+  Zap,
 } from 'lucide-react';
 import { getServices } from '../api';
 import ServiceCard from '../components/ServiceCard';
 import ServiceAssistant from '../components/ServiceAssistant';
+import EmergencyModal from '../components/EmergencyModal';
+import { useAuth } from '../context/AuthContext';
 import { SERVICE_CATEGORIES } from '../utils/serviceMeta';
 
 const trustStats = [
   { value: '500+', label: 'Verified providers', icon: ShieldCheck },
   { value: '10K+', label: 'Completed bookings', icon: CheckCircle2 },
   { value: '4.8/5', label: 'Average rating', icon: Star },
-  { value: '24 hrs', label: 'Fast response windows', icon: Clock },
+  { value: 'Live', label: 'Real-time availability', icon: Zap },
 ];
 
 const pillars = [
@@ -50,7 +57,7 @@ const steps = [
   },
   {
     title: 'Review the listing',
-    description: 'Check pricing, provider details, and ratings before you commit.',
+    description: 'Check pricing, provider details, and real-time availability before you commit.',
     icon: ShieldCheck,
   },
   {
@@ -60,9 +67,18 @@ const steps = [
   },
 ];
 
+const emergencyUseCases = [
+  { icon: Zap, label: 'Electric Short Circuit', color: 'from-amber-500 to-orange-600' },
+  { icon: Droplets, label: 'Water Leakage', color: 'from-cyan-500 to-blue-600' },
+  { icon: KeyRound, label: 'Lockout', color: 'from-violet-500 to-purple-600' },
+  { icon: Flame, label: 'Gas Leak', color: 'from-red-500 to-rose-600' },
+];
+
 export default function Home() {
+  const { user } = useAuth();
   const [featured, setFeatured] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showEmergency, setShowEmergency] = useState(false);
 
   useEffect(() => {
     const loadFeatured = async () => {
@@ -142,6 +158,74 @@ export default function Home() {
         </div>
       </section>
 
+      {/* âš¡ Emergency Services Section */}
+      <section className="section-shell mt-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="overflow-hidden rounded-[32px] border border-red-900/20 bg-gradient-to-br from-slate-950 via-red-950/40 to-slate-950 p-8 shadow-2xl lg:p-10"
+        >
+          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-red-400">
+                <Siren className="h-3.5 w-3.5" />
+                Emergency Mode
+              </div>
+              <h2 className="mt-5 font-display text-4xl font-semibold text-white sm:text-5xl">
+                Get help in emergencies <span className="text-red-400">instantly</span>
+              </h2>
+              <p className="mt-4 max-w-2xl text-base leading-8 text-slate-400">
+                One tap sends an SOS to the nearest available provider. No waiting, no scrolling â€” just instant help when every second matters.
+              </p>
+
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                {emergencyUseCases.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.label}
+                      className="flex items-center gap-4 rounded-[20px] border border-white/8 bg-white/3 px-5 py-4 transition-all duration-300 hover:border-white/15 hover:bg-white/5"
+                    >
+                      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${item.color} text-white shadow-lg`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span className="text-sm font-semibold text-white">{item.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative flex h-32 w-32 items-center justify-center rounded-full border-2 border-red-500/30 bg-red-500/10">
+                <Siren className="h-14 w-14 text-red-400" />
+                <div className="absolute inset-0 animate-ping rounded-full border border-red-500/20" style={{ animationDuration: '3s' }} />
+              </div>
+              {user?.role === 'customer' ? (
+                <button
+                  onClick={() => setShowEmergency(true)}
+                  className="btn-emergency !px-8 !py-4 !text-base"
+                  id="emergency-hero-btn"
+                >
+                  <Siren className="h-5 w-5" />
+                  Get Instant Help
+                </button>
+              ) : (
+                <Link
+                  to={user ? '/services' : '/login'}
+                  className="btn-emergency !px-8 !py-4 !text-base"
+                >
+                  <Siren className="h-5 w-5" />
+                  {user ? 'Browse Services' : 'Sign In for SOS'}
+                </Link>
+              )}
+              <p className="text-xs text-slate-600">Notifies nearest available providers</p>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
       <ServiceAssistant />
 
       <section className="section-shell mt-16">
@@ -187,7 +271,7 @@ export default function Home() {
             const Icon = category.icon;
             const descriptions = {
               electrician: 'Wiring, appliance repair, and electrical installations by certified pros.',
-              plumber: 'Leak fixes, pipe work, and bathroom fittings — fast and reliable.',
+              plumber: 'Leak fixes, pipe work, and bathroom fittings â€” fast and reliable.',
               tutor: 'Academic coaching, test prep, and skill-building with verified tutors.',
               delivery: 'Parcel pickup, furniture moves, and same-day local deliveries.',
               cleaning: 'Deep cleaning, sanitization, and routine maintenance for your space.',
@@ -332,6 +416,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <EmergencyModal isOpen={showEmergency} onClose={() => setShowEmergency(false)} />
     </div>
   );
 }

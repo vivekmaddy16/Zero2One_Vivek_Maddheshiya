@@ -10,6 +10,7 @@ export function SocketProvider({ children }) {
   const { user } = useAuth();
   const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [providerAvailability, setProviderAvailability] = useState({});
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -24,6 +25,21 @@ export function SocketProvider({ children }) {
 
       newSocket.on('onlineUsers', (users) => {
         setOnlineUsers(users);
+      });
+
+      // Listen for real-time provider availability changes
+      newSocket.on('providerAvailabilityChanged', (data) => {
+        if (data && data.providerId) {
+          setProviderAvailability((prev) => ({
+            ...prev,
+            [data.providerId]: {
+              isAvailable: data.isAvailable,
+              availableIn: data.availableIn,
+              acceptsEmergency: data.acceptsEmergency,
+              updatedAt: data.updatedAt || new Date().toISOString(),
+            },
+          }));
+        }
       });
 
       return () => {
@@ -42,7 +58,7 @@ export function SocketProvider({ children }) {
   }, [user]);
 
   return (
-    <SocketContext.Provider value={{ socket, onlineUsers }}>
+    <SocketContext.Provider value={{ socket, onlineUsers, providerAvailability }}>
       {children}
     </SocketContext.Provider>
   );
@@ -53,3 +69,4 @@ export const useSocket = () => {
   if (!context) throw new Error('useSocket must be used within SocketProvider');
   return context;
 };
+

@@ -12,12 +12,14 @@ import {
   Phone,
   ShieldCheck,
   Star,
+  Zap,
 } from 'lucide-react';
 import { getService, getServiceRatings } from '../api';
 import StarRating from '../components/StarRating';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { formatPriceUnit, getServiceMeta } from '../utils/serviceMeta';
+import { useSocket } from '../context/SocketContext';
 
 const guarantees = [
   'Provider details visible before booking',
@@ -29,6 +31,7 @@ export default function ServiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { providerAvailability } = useSocket();
   const [service, setService] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -266,6 +269,27 @@ export default function ServiceDetail() {
                 <p className="mt-2 text-sm text-slate-300">{formatPriceUnit(service.priceUnit)}</p>
               </div>
 
+              {/* Availability Badge */}
+              {(() => {
+                const pid = service.providerId?._id;
+                const sa = pid ? providerAvailability[pid] : null;
+                const avail = sa?.isAvailable ?? service.providerId?.isAvailable ?? false;
+                const eta = sa?.availableIn ?? service.providerId?.availableIn ?? null;
+                if (avail && !eta) return (
+                  <div className="mt-4 flex items-center gap-2.5 rounded-[20px] border border-emerald-200 bg-emerald-50 px-5 py-3">
+                    <span className="availability-dot-green" />
+                    <span className="text-sm font-semibold text-emerald-700">Available Now</span>
+                  </div>
+                );
+                if (avail && eta) return (
+                  <div className="mt-4 flex items-center gap-2.5 rounded-[20px] border border-amber-200 bg-amber-50 px-5 py-3">
+                    <span className="availability-dot-amber" />
+                    <span className="text-sm font-semibold text-amber-700">Available in {eta} mins</span>
+                  </div>
+                );
+                return null;
+              })()}
+
               <div className="mt-5 space-y-3">
                 {[
                   'Book a time slot in minutes',
@@ -294,6 +318,15 @@ export default function ServiceDetail() {
                 <div>
                   <h2 className="font-display text-2xl font-semibold text-ink-900">{service.providerId?.name || 'Provider'}</h2>
                   <p className="mt-1 text-sm text-slate-500">{meta.label} specialist</p>
+                  {(() => {
+                    const pid = service.providerId?._id;
+                    const sa = pid ? providerAvailability[pid] : null;
+                    const avail = sa?.isAvailable ?? service.providerId?.isAvailable ?? false;
+                    const eta = sa?.availableIn ?? service.providerId?.availableIn ?? null;
+                    if (avail && !eta) return <span className="mt-2 availability-badge availability-available inline-flex"><span className="availability-dot-green" />Available Now</span>;
+                    if (avail && eta) return <span className="mt-2 availability-badge availability-soon inline-flex"><span className="availability-dot-amber" />In {eta} mins</span>;
+                    return null;
+                  })()}
                 </div>
               </div>
 

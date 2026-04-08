@@ -11,10 +11,12 @@ import {
   Package,
   Plus,
   ShieldCheck,
+  Siren,
   Trash2,
   Users,
   X,
   XCircle,
+  Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -24,6 +26,7 @@ import {
   getBookingStats,
   getMyServices,
   getProviderRequests,
+  toggleAvailability,
   updateBookingStatus,
   updateService,
 } from '../api';
@@ -41,6 +44,7 @@ const statusConfig = {
   in_progress: { color: 'status-in_progress', icon: Loader, label: 'In Progress' },
   completed: { color: 'status-completed', icon: CheckCircle2, label: 'Completed' },
   cancelled: { color: 'status-cancelled', icon: XCircle, label: 'Cancelled' },
+  emergency: { color: 'status-emergency', icon: Siren, label: 'Emergency' },
 };
 
 const initialServiceForm = {
@@ -53,7 +57,7 @@ const initialServiceForm = {
 };
 
 export default function ProviderDashboard() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { socket } = useSocket();
   const navigate = useNavigate();
   const [tab, setTab] = useState('requests');
@@ -65,6 +69,10 @@ export default function ProviderDashboard() {
   const [showServiceForm, setShowServiceForm] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [serviceForm, setServiceForm] = useState(initialServiceForm);
+  const [isAvailable, setIsAvailable] = useState(user?.isAvailable || false);
+  const [availableIn, setAvailableIn] = useState(user?.availableIn || null);
+  const [acceptsEmergency, setAcceptsEmergency] = useState(user?.acceptsEmergency || false);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   const handleLocationPatch = useCallback((payload) => {
     setRequests((current) => applyBookingLocationUpdate(current, payload));
@@ -221,6 +229,125 @@ export default function ProviderDashboard() {
               <p className="mt-4 text-sm leading-7 text-slate-300">
                 Clean request states, service cards, and quick action buttons help providers feel organized and trustworthy.
               </p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Availability Toggle Panel */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mt-8 card-elevated overflow-hidden"
+        >
+          <div className={`p-6 transition-all duration-500 ${
+            isAvailable
+              ? 'bg-gradient-to-r from-emerald-50 via-white to-emerald-50/50 border-b border-emerald-100'
+              : 'bg-gradient-to-r from-slate-50 via-white to-slate-50/50 border-b border-slate-100'
+          }`}>
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-4">
+                <div className={`flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-500 ${
+                  isAvailable
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-slate-100 text-slate-500'
+                }`}>
+                  <Zap className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-display text-xl font-semibold text-ink-900">Live Availability</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {isAvailable ? 'Customers can see you\'re available right now' : 'Toggle on to appear in live availability searches'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4">
+                {/* ETA dropdown */}
+                {isAvailable && (
+                  <select
+                    value={availableIn || ''}
+                    onChange={async (e) => {
+                      const val = e.target.value ? Number(e.target.value) : null;
+                      setAvailableIn(val);
+                      try {
+                        const { data } = await toggleAvailability({ isAvailable: true, availableIn: val });
+                        updateUser(data);
+                        if (socket) socket.emit('availabilityUpdate', { providerId: user._id, isAvailable: true, availableIn: val, acceptsEmergency });
+                      } catch (err) { console.error(err); }
+                    }}
+                    className="input-field !w-auto !py-2.5 !text-sm"
+                  >
+                    <option value="">Available Now</option>
+                    <option value="15">In 15 mins</option>
+                    <option value="30">In 30 mins</option>
+                    <option value="45">In 45 mins</option>
+                    <option value="60">In 60 mins</option>
+                  </select>
+                )}
+
+                {/* Emergency toggle */}
+                <button
+                  onClick={async () => {
+                    const next = !acceptsEmergency;
+                    setAcceptsEmergency(next);
+                    try {
+                      const { data } = await toggleAvailability({ acceptsEmergency: next });
+                      updateUser(data);
+                      if (socket) socket.emit('availabilityUpdate', { providerId: user._id, isAvailable, availableIn, acceptsEmergency: next });
+                      toast.success(next ? 'Emergency requests enabled' : 'Emergency requests disabled');
+                    } catch (err) { console.error(err); }
+                  }}
+                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-300 ${
+                    acceptsEmergency
+                      ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                      : 'border-slate-200 bg-white text-slate-500 hover:border-red-200 hover:text-red-600'
+                  }`}
+                >
+                  <Siren className="h-4 w-4" />
+                  {acceptsEmergency ? 'SOS Active' : 'Accept SOS'}
+                </button>
+
+                {/* Main toggle */}
+                <button
+                  disabled={availabilityLoading}
+                  onClick={async () => {
+                    setAvailabilityLoading(true);
+                    const next = !isAvailable;
+                    setIsAvailable(next);
+                    try {
+                      const { data } = await toggleAvailability({ isAvailable: next, availableIn: next ? availableIn : null });
+                      updateUser(data);
+                      if (socket) socket.emit('availabilityUpdate', { providerId: user._id, isAvailable: next, availableIn: next ? availableIn : null, acceptsEmergency });
+                      toast.success(next ? 'You are now available!' : 'You are now offline');
+                    } catch (err) {
+                      setIsAvailable(!next);
+                      toast.error('Failed to update availability');
+                    } finally {
+                      setAvailabilityLoading(false);
+                    }
+                  }}
+                  className={`relative flex h-12 w-[100px] items-center rounded-full border-2 p-1 transition-all duration-500 ${
+                    isAvailable
+                      ? 'border-emerald-300 bg-emerald-500'
+                      : 'border-slate-300 bg-slate-200'
+                  }`}
+                >
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md transition-all duration-500 ${
+                    isAvailable ? 'translate-x-[52px]' : 'translate-x-0'
+                  }`}>
+                    {isAvailable
+                      ? <span className="availability-dot-green" />
+                      : <span className="availability-dot-red" />
+                    }
+                  </div>
+                  <span className={`absolute text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                    isAvailable ? 'left-3 text-white' : 'right-3 text-slate-500'
+                  }`}>
+                    {isAvailable ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>

@@ -9,17 +9,45 @@ import {
   Star,
 } from 'lucide-react';
 import { formatPriceUnit, getServiceMeta } from '../utils/serviceMeta';
+import { useSocket } from '../context/SocketContext';
 
 export default function ServiceCard({ service, index = 0 }) {
   const meta = getServiceMeta(service.category);
   const Icon = meta.icon;
   const [imageFailed, setImageFailed] = useState(false);
+  const { providerAvailability } = useSocket();
 
   useEffect(() => {
     setImageFailed(false);
   }, [service._id, service.image]);
 
   const showImage = Boolean(service.image && !imageFailed);
+
+  // Determine availability status
+  const providerId = service.providerId?._id;
+  const socketAvail = providerId ? providerAvailability[providerId] : null;
+  const isAvailable = socketAvail?.isAvailable ?? service.providerId?.isAvailable ?? false;
+  const availableIn = socketAvail?.availableIn ?? service.providerId?.availableIn ?? null;
+
+  const getAvailabilityBadge = () => {
+    if (isAvailable && !availableIn) {
+      return (
+        <span className="availability-badge availability-available">
+          <span className="availability-dot-green" />
+          Available Now
+        </span>
+      );
+    }
+    if (isAvailable && availableIn) {
+      return (
+        <span className="availability-badge availability-soon">
+          <span className="availability-dot-amber" />
+          In {availableIn} mins
+        </span>
+      );
+    }
+    return null;
+  };
 
   return (
     <motion.div
@@ -67,12 +95,15 @@ export default function ServiceCard({ service, index = 0 }) {
               </span>
             </div>
 
-            {service.totalRatings > 0 && (
-              <div className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full border border-primary-100 bg-white px-3 py-1 text-xs font-semibold text-ink-800 shadow-soft">
-                <Star className="h-3.5 w-3.5 fill-primary-400 text-primary-400" />
-                {service.avgRating}
-              </div>
-            )}
+            <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
+              {service.totalRatings > 0 && (
+                <div className="inline-flex items-center gap-1 rounded-full border border-primary-100 bg-white px-3 py-1 text-xs font-semibold text-ink-800 shadow-soft">
+                  <Star className="h-3.5 w-3.5 fill-primary-400 text-primary-400" />
+                  {service.avgRating}
+                </div>
+              )}
+              {getAvailabilityBadge()}
+            </div>
           </div>
 
           <div className="flex flex-1 flex-col p-5">

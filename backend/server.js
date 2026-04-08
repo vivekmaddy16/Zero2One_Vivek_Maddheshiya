@@ -33,6 +33,7 @@ app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/ratings', require('./routes/ratingRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/recommend', require('./routes/recommendRoutes'));
+app.use('/api/availability', require('./routes/availabilityRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -89,6 +90,25 @@ io.on('connection', (socket) => {
     const targetSocket = onlineUsers.get(targetUserId);
     if (targetSocket) {
       io.to(targetSocket).emit('bookingLocationUpdated', location);
+    }
+  });
+
+  // Handle provider availability updates (broadcast to all)
+  socket.on('availabilityUpdate', (data) => {
+    // Broadcast to all connected clients so service cards update in real-time
+    socket.broadcast.emit('providerAvailabilityChanged', data);
+  });
+
+  // Handle emergency request notifications
+  socket.on('emergencyRequest', (data) => {
+    const { targetProviderIds, booking } = data;
+    if (targetProviderIds && Array.isArray(targetProviderIds)) {
+      targetProviderIds.forEach((providerId) => {
+        const providerSocket = onlineUsers.get(providerId);
+        if (providerSocket) {
+          io.to(providerSocket).emit('emergencyBookingReceived', booking);
+        }
+      });
     }
   });
 
