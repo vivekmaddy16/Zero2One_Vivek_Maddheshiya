@@ -10,6 +10,7 @@ import {
   IndianRupee,
   Loader,
   MapPin,
+  Navigation,
   ShieldCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -17,6 +18,7 @@ import { createBooking, getService } from '../api';
 import MapView from '../components/MapView';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { fetchCurrentLocationAddress } from '../utils/locationAutofill';
 import { formatPriceUnit, getServiceMeta } from '../utils/serviceMeta';
 
 const timeSlots = [
@@ -48,17 +50,29 @@ export default function Booking() {
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
   const [formData, setFormData] = useState({
     scheduledDate: '',
     timeSlot: '',
-    address: '',
+    address: user?.location || '',
     notes: '',
   });
   const providerHasCoords =
     Number.isFinite(service?.providerId?.lat) && Number.isFinite(service?.providerId?.lng);
   const customerCoords = {
-    lat: Number.isFinite(user?.lat) && user?.lat !== 0 ? user.lat : null,
-    lng: Number.isFinite(user?.lng) && user?.lng !== 0 ? user.lng : null,
+    lat:
+      Number.isFinite(currentLocation?.lat)
+        ? currentLocation.lat
+        : Number.isFinite(user?.lat) && user?.lat !== 0
+          ? user.lat
+          : null,
+    lng:
+      Number.isFinite(currentLocation?.lng)
+        ? currentLocation.lng
+        : Number.isFinite(user?.lng) && user?.lng !== 0
+          ? user.lng
+          : null,
   };
   const customerHasCoords =
     Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng);
@@ -78,6 +92,24 @@ export default function Booking() {
 
     loadService();
   }, [navigate, serviceId]);
+
+  const handleAutofillAddress = async () => {
+    setFetchingLocation(true);
+
+    try {
+      const locationData = await fetchCurrentLocationAddress();
+      setCurrentLocation(locationData);
+      setFormData((prev) => ({
+        ...prev,
+        address: locationData.address,
+      }));
+      toast.success('Current location added to the address field');
+    } catch (error) {
+      toast.error(error.message || 'Unable to fetch your current location');
+    } finally {
+      setFetchingLocation(false);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -269,6 +301,25 @@ export default function Booking() {
                 </div>
               </div>
 
+              <button
+                type="button"
+                onClick={handleAutofillAddress}
+                disabled={fetchingLocation}
+                className="mt-5 inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {fetchingLocation ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    Fetching current location
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="h-4 w-4" />
+                    Use current location
+                  </>
+                )}
+              </button>
+
               <textarea
                 value={formData.address}
                 onChange={(event) => setFormData({ ...formData, address: event.target.value })}
@@ -277,6 +328,10 @@ export default function Booking() {
                 className="input-field mt-5 resize-none"
                 required
               />
+
+              <p className="mt-3 text-xs text-slate-400">
+                Allow location access to autofill your address from your current position.
+              </p>
             </div>
 
             <div className="card p-7">

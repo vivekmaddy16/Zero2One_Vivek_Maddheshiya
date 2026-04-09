@@ -7,6 +7,7 @@ import {
   KeyRound,
   Loader,
   MapPin,
+  Navigation,
   Send,
   X,
   Zap,
@@ -18,6 +19,7 @@ import toast from 'react-hot-toast';
 import { createEmergencyBooking } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { fetchCurrentLocationAddress } from '../utils/locationAutofill';
 
 const emergencyTypes = [
   {
@@ -70,7 +72,9 @@ export default function EmergencyModal({ isOpen, onClose }) {
   const [address, setAddress] = useState(user?.location || '');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
   const [booking, setBooking] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(null);
 
   const handleSubmit = async () => {
     if (!selectedType) {
@@ -90,8 +94,8 @@ export default function EmergencyModal({ isOpen, onClose }) {
         emergencyType: selectedType,
         address: address.trim(),
         notes,
-        customerLat: user?.lat || null,
-        customerLng: user?.lng || null,
+        customerLat: currentLocation?.lat || user?.lat || null,
+        customerLng: currentLocation?.lng || user?.lng || null,
       });
 
       setBooking(data);
@@ -119,8 +123,24 @@ export default function EmergencyModal({ isOpen, onClose }) {
     setSelectedType(null);
     setAddress(user?.location || '');
     setNotes('');
+    setCurrentLocation(null);
     setBooking(null);
     onClose();
+  };
+
+  const handleAutofillAddress = async () => {
+    setFetchingLocation(true);
+
+    try {
+      const locationData = await fetchCurrentLocationAddress();
+      setCurrentLocation(locationData);
+      setAddress(locationData.address);
+      toast.success('Current location added to the address field');
+    } catch (error) {
+      toast.error(error.message || 'Unable to fetch your current location');
+    } finally {
+      setFetchingLocation(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -262,6 +282,24 @@ export default function EmergencyModal({ isOpen, onClose }) {
                   <MapPin className="h-4 w-4 text-red-400" />
                   Your address
                 </label>
+                <button
+                  type="button"
+                  onClick={handleAutofillAddress}
+                  disabled={fetchingLocation}
+                  className="mb-3 inline-flex items-center gap-2 rounded-full border border-red-500/25 bg-red-500/10 px-4 py-2 text-xs font-semibold text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {fetchingLocation ? (
+                    <>
+                      <Loader className="h-4 w-4 animate-spin" />
+                      Fetching current location
+                    </>
+                  ) : (
+                    <>
+                      <Navigation className="h-4 w-4" />
+                      Use current location
+                    </>
+                  )}
+                </button>
                 <textarea
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -270,6 +308,9 @@ export default function EmergencyModal({ isOpen, onClose }) {
                   className="w-full rounded-[18px] border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white placeholder:text-slate-600 transition-all focus:border-red-500/40 focus:outline-none focus:ring-2 focus:ring-red-500/20"
                   required
                 />
+                <p className="mt-2 text-xs text-slate-500">
+                  Allow location access to autofill the emergency address from your device.
+                </p>
               </div>
 
               <div className="mt-4">
