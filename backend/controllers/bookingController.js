@@ -9,6 +9,49 @@ const bookingPopulate = [
 ];
 
 const shareableStatuses = ['pending', 'confirmed', 'in_progress'];
+const emergencyCategoryMap = {
+  electrical: 'electrician',
+  plumbing: 'plumber',
+  lockout: 'other',
+  gas_leak: 'plumber',
+  other: 'other'
+};
+
+async function findEmergencyServiceOptions(emergencyType) {
+  const serviceCategory = emergencyCategoryMap[emergencyType] || 'other';
+  const providerQueryVariants = [
+    { role: 'provider', isAvailable: true, acceptsEmergency: true },
+    { role: 'provider', isAvailable: true }
+  ];
+
+  for (const providerQuery of providerQueryVariants) {
+    const emergencyProviders = await User.find(providerQuery).select('_id name lat lng');
+    if (emergencyProviders.length === 0) {
+      continue;
+    }
+
+    const providerIds = emergencyProviders.map((provider) => provider._id);
+
+    let matchingServices = await Service.find({
+      providerId: { $in: providerIds },
+      isActive: true,
+      category: serviceCategory
+    }).populate('providerId', 'name lat lng');
+
+    if (matchingServices.length === 0) {
+      matchingServices = await Service.find({
+        providerId: { $in: providerIds },
+        isActive: true
+      }).populate('providerId', 'name lat lng');
+    }
+
+    if (matchingServices.length > 0) {
+      return matchingServices;
+    }
+  }
+
+  return [];
+}
 
 // @desc    Create a booking (Customer only)
 // @route   POST /api/bookings
@@ -282,39 +325,7 @@ exports.createEmergencyBooking = async (req, res) => {
       return res.status(400).json({ message: 'Emergency type is required' });
     }
 
-    // Map emergency types to service categories
-    const emergencyCategoryMap = {
-      electrical: 'electrician',
-      plumbing: 'plumber',
-      lockout: 'other',
-      gas_leak: 'plumber',
-      other: 'other'
-    };
-
-    const serviceCategory = emergencyCategoryMap[emergencyType] || 'other';
-
-    // Find available emergency providers in the matching category
-    const emergencyProviders = await User.find({
-      role: 'provider',
-      isAvailable: true,
-      acceptsEmergency: true
-    }).select('_id name lat lng');
-
-    // Find services matching the category from emergency providers
-    const providerIds = emergencyProviders.map(p => p._id);
-    let matchingServices = await Service.find({
-      providerId: { $in: providerIds },
-      isActive: true,
-      category: serviceCategory
-    }).populate('providerId', 'name lat lng');
-
-    // If no exact category match, try any service from emergency providers
-    if (matchingServices.length === 0) {
-      matchingServices = await Service.find({
-        providerId: { $in: providerIds },
-        isActive: true
-      }).populate('providerId', 'name lat lng');
-    }
+    const matchingServices = await findEmergencyServiceOptions(emergencyType);
 
     if (matchingServices.length === 0) {
       return res.status(404).json({

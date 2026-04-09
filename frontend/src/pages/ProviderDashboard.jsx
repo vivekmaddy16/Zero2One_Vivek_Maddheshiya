@@ -57,7 +57,7 @@ const initialServiceForm = {
 };
 
 export default function ProviderDashboard() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const { socket } = useSocket();
   const navigate = useNavigate();
   const [tab, setTab] = useState('requests');
@@ -73,6 +73,25 @@ export default function ProviderDashboard() {
   const [availableIn, setAvailableIn] = useState(user?.availableIn || null);
   const [acceptsEmergency, setAcceptsEmergency] = useState(user?.acceptsEmergency || false);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+
+  useEffect(() => {
+    setIsAvailable(user?.isAvailable || false);
+    setAvailableIn(user?.availableIn || null);
+    setAcceptsEmergency(user?.acceptsEmergency || false);
+  }, [user]);
+
+  const handleProviderAuthError = useCallback((error) => {
+    const message = error?.response?.data?.message || '';
+
+    if (error?.response?.status === 403 && message.includes('not authorized')) {
+      toast.error('This session is not signed in as a provider. Please log in with a provider account.');
+      logout();
+      navigate('/login');
+      return true;
+    }
+
+    return false;
+  }, [logout, navigate]);
 
   const handleLocationPatch = useCallback((payload) => {
     setRequests((current) => applyBookingLocationUpdate(current, payload));
@@ -103,6 +122,7 @@ export default function ProviderDashboard() {
         setServices(serviceResponse.data);
         setStats(statsResponse.data);
       } catch (error) {
+        if (handleProviderAuthError(error)) return;
         console.error(error);
       } finally {
         setLoading(false);
@@ -124,6 +144,7 @@ export default function ProviderDashboard() {
       setServices(serviceResponse.data);
       setStats(statsResponse.data);
     } catch (error) {
+      if (handleProviderAuthError(error)) return;
       console.error(error);
     }
   };
@@ -154,6 +175,7 @@ export default function ProviderDashboard() {
       toast.success(`Booking marked ${formatStatusLabel(status).toLowerCase()}`);
       refreshData();
     } catch (error) {
+      if (handleProviderAuthError(error)) return;
       toast.error(error.response?.data?.message || 'Failed to update booking');
     }
   };
@@ -179,6 +201,7 @@ export default function ProviderDashboard() {
       resetForm();
       refreshData();
     } catch (error) {
+      if (handleProviderAuthError(error)) return;
       toast.error(error.response?.data?.message || 'Failed to save service');
     }
   };
@@ -191,6 +214,7 @@ export default function ProviderDashboard() {
       toast.success('Service deleted');
       refreshData();
     } catch (error) {
+      if (handleProviderAuthError(error)) return;
       toast.error(error.response?.data?.message || 'Failed to delete service');
     }
   };
@@ -274,7 +298,11 @@ export default function ProviderDashboard() {
                         const { data } = await toggleAvailability({ isAvailable: true, availableIn: val });
                         updateUser(data);
                         if (socket) socket.emit('availabilityUpdate', { providerId: user._id, isAvailable: true, availableIn: val, acceptsEmergency });
-                      } catch (err) { console.error(err); }
+                      } catch (err) {
+                        if (handleProviderAuthError(err)) return;
+                        console.error(err);
+                        toast.error(err.response?.data?.message || 'Failed to update response time');
+                      }
                     }}
                     className="input-field !w-auto !py-2.5 !text-sm"
                   >
@@ -285,28 +313,6 @@ export default function ProviderDashboard() {
                     <option value="60">In 60 mins</option>
                   </select>
                 )}
-
-                {/* Emergency toggle */}
-                <button
-                  onClick={async () => {
-                    const next = !acceptsEmergency;
-                    setAcceptsEmergency(next);
-                    try {
-                      const { data } = await toggleAvailability({ acceptsEmergency: next });
-                      updateUser(data);
-                      if (socket) socket.emit('availabilityUpdate', { providerId: user._id, isAvailable, availableIn, acceptsEmergency: next });
-                      toast.success(next ? 'Emergency requests enabled' : 'Emergency requests disabled');
-                    } catch (err) { console.error(err); }
-                  }}
-                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-300 ${
-                    acceptsEmergency
-                      ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
-                      : 'border-slate-200 bg-white text-slate-500 hover:border-red-200 hover:text-red-600'
-                  }`}
-                >
-                  <Siren className="h-4 w-4" />
-                  {acceptsEmergency ? 'SOS Active' : 'Accept SOS'}
-                </button>
 
                 {/* Main toggle */}
                 <button
@@ -321,8 +327,9 @@ export default function ProviderDashboard() {
                       if (socket) socket.emit('availabilityUpdate', { providerId: user._id, isAvailable: next, availableIn: next ? availableIn : null, acceptsEmergency });
                       toast.success(next ? 'You are now available!' : 'You are now offline');
                     } catch (err) {
+                      if (handleProviderAuthError(err)) return;
                       setIsAvailable(!next);
-                      toast.error('Failed to update availability');
+                      toast.error(err.response?.data?.message || 'Failed to update availability');
                     } finally {
                       setAvailabilityLoading(false);
                     }
@@ -346,6 +353,50 @@ export default function ProviderDashboard() {
                   }`}>
                     {isAvailable ? 'ON' : 'OFF'}
                   </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-[24px] border border-red-100 bg-gradient-to-r from-red-50 via-white to-orange-50 p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className={`mt-0.5 flex h-11 w-11 items-center justify-center rounded-2xl ${
+                    acceptsEmergency ? 'bg-red-100 text-red-700' : 'bg-white text-slate-500'
+                  }`}>
+                    <Siren className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-display text-lg font-semibold text-ink-900">Emergency Requests</h4>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Let customers send you SOS jobs for urgent repairs.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    const next = !acceptsEmergency;
+                    setAcceptsEmergency(next);
+                    try {
+                      const { data } = await toggleAvailability({ acceptsEmergency: next });
+                      updateUser(data);
+                      if (socket) socket.emit('availabilityUpdate', { providerId: user._id, isAvailable, availableIn, acceptsEmergency: next });
+                      toast.success(next ? 'Emergency requests enabled' : 'Emergency requests disabled');
+                    } catch (err) {
+                      if (handleProviderAuthError(err)) return;
+                      console.error(err);
+                      setAcceptsEmergency(!next);
+                      toast.error(err.response?.data?.message || 'Failed to update SOS availability');
+                    }
+                  }}
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full border px-4 py-3 text-sm font-semibold transition-all duration-300 sm:w-auto ${
+                    acceptsEmergency
+                      ? 'border-red-200 bg-red-600 text-white hover:bg-red-700'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-red-200 hover:text-red-600'
+                  }`}
+                >
+                  <Siren className="h-4 w-4" />
+                  {acceptsEmergency ? 'SOS Active' : 'Accept SOS'}
                 </button>
               </div>
             </div>
@@ -393,7 +444,7 @@ export default function ProviderDashboard() {
         {tab === 'requests' ? (
           <>
             <div className="mt-6 flex flex-wrap gap-3">
-              {['all', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'].map((status) => (
+              {['all', 'pending', 'emergency', 'confirmed', 'in_progress', 'completed', 'cancelled'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
@@ -484,13 +535,13 @@ export default function ProviderDashboard() {
                           </div>
 
                           <div className="flex flex-wrap gap-3 xl:max-w-[300px] xl:justify-end">
-                            {booking.status === 'pending' ? (
+                            {booking.status === 'pending' || booking.status === 'emergency' ? (
                               <>
                                 <button onClick={() => handleStatusUpdate(booking._id, 'confirmed')} className="btn-primary">
-                                  Accept
+                                  {booking.status === 'emergency' ? 'Accept emergency' : 'Accept'}
                                 </button>
                                 <button onClick={() => handleStatusUpdate(booking._id, 'cancelled')} className="btn-secondary">
-                                  Decline
+                                  {booking.status === 'emergency' ? 'Decline emergency' : 'Decline'}
                                 </button>
                               </>
                             ) : null}

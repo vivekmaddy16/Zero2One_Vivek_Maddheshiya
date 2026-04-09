@@ -38,6 +38,7 @@ const statusConfig = {
   in_progress: { color: 'status-in_progress', icon: Loader, label: 'In Progress' },
   completed: { color: 'status-completed', icon: CheckCircle2, label: 'Completed' },
   cancelled: { color: 'status-cancelled', icon: XCircle, label: 'Cancelled' },
+  emergency: { color: 'status-emergency', icon: Loader, label: 'Emergency' },
 };
 
 const emptyRecommendations = {
@@ -249,7 +250,11 @@ export default function CustomerDashboard() {
           ) : (
             <div className="space-y-5">
               {bookings.map((booking, index) => {
-                const config = statusConfig[booking.status];
+                const config = statusConfig[booking.status] || {
+                  color: 'status-pending',
+                  icon: Clock,
+                  label: formatStatusLabel(booking.status || 'pending'),
+                };
                 const StatusIcon = config.icon;
                 const meta = getServiceMeta(booking.serviceId?.category);
                 const ServiceIcon = meta.icon;

@@ -33,7 +33,10 @@ exports.register = async (req, res) => {
         avatar: user.avatar,
         bio: user.bio,
         lat: user.lat,
-        lng: user.lng
+        lng: user.lng,
+        isAvailable: user.isAvailable,
+        availableIn: user.availableIn,
+        acceptsEmergency: user.acceptsEmergency
       }
     });
   } catch (error) {
@@ -71,7 +74,10 @@ exports.login = async (req, res) => {
         avatar: user.avatar,
         bio: user.bio,
         lat: user.lat,
-        lng: user.lng
+        lng: user.lng,
+        isAvailable: user.isAvailable,
+        availableIn: user.availableIn,
+        acceptsEmergency: user.acceptsEmergency
       }
     });
   } catch (error) {
@@ -94,7 +100,10 @@ exports.getMe = async (req, res) => {
       avatar: user.avatar,
       bio: user.bio,
       lat: user.lat,
-      lng: user.lng
+      lng: user.lng,
+      isAvailable: user.isAvailable,
+      availableIn: user.availableIn,
+      acceptsEmergency: user.acceptsEmergency
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

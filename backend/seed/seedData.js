@@ -57,6 +57,9 @@ const seedData = async () => {
         location: DEMO_LOCATION,
         lat: DEMO_LAT,
         lng: DEMO_LNG,
+        isAvailable: true,
+        acceptsEmergency: true,
+        availabilityUpdatedAt: new Date(),
         bio: 'Expert electrician with 10+ years experience. Specializing in home wiring, appliance repair, and smart home installations.'
       },
       {
@@ -68,6 +71,9 @@ const seedData = async () => {
         location: DEMO_LOCATION,
         lat: DEMO_LAT,
         lng: DEMO_LNG,
+        isAvailable: true,
+        acceptsEmergency: true,
+        availabilityUpdatedAt: new Date(),
         bio: 'Professional plumber handling all types of plumbing work including pipe fitting, leak repair, and bathroom renovation.'
       },
       {
