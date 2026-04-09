@@ -101,8 +101,8 @@ Our platform provides a **centralized web-based marketplace** where customers ca
 
 ## 🔗 Additional Links
 
-* 🌐 **Live Project:** ________
-* 💻 **GitHub Repository:** ______
+* 🌐 **Live Project:** zero2-one-vivek-maddheshiya.vercel.app
+* 💻 **GitHub Repository:** https://github.com/vivekmaddy16/Zero2One_Vivek_Maddheshiya
 * 📊 **Presentation (PPT):** ________
 
 ---
@@ -137,7 +137,8 @@ Our platform provides a **centralized web-based marketplace** where customers ca
 
 ## 📸 Demo 
 
-_____________________
+<img width="1919" height="1008" alt="image" src="https://github.com/user-attachments/assets/d835634d-6646-4b04-ae3d-d49aef1c97b8" />
+
 
 ---
 
